@@ -1,0 +1,867 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  TextInput,
+  Modal,
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
+} from 'react-native';
+import { 
+  Search, 
+  UserPlus, 
+  MoreVertical, 
+  Phone, 
+  Mail, 
+  Home, 
+  Crown, 
+  X, 
+  Building2,
+  ChevronRight,
+  Edit,
+  Trash2,
+} from 'lucide-react-native';
+import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
+import { residentService, Resident, InviteResidentRequest } from '../../services/resident.service';
+import { siteService, Block, CreateBlockRequest } from '../../services/site.service';
+import { useAuth } from '../../context/AuthContext';
+
+type ViewMode = 'blocks' | 'residents';
+
+const AdminResidents = () => {
+  const { user } = useAuth();
+  const [viewMode, setViewMode] = useState<ViewMode>('blocks');
+  const [selectedBlock, setSelectedBlock] = useState<Block | null>(null);
+  const [residents, setResidents] = useState<Resident[]>([]);
+  const [blocks, setBlocks] = useState<Block[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showActionMenu, setShowActionMenu] = useState<string | null>(null);
+  const [showAddBlockModal, setShowAddBlockModal] = useState(false);
+  const [blockFormData, setBlockFormData] = useState({
+    name: '',
+    totalFloors: '',
+  });
+
+  // Form state
+  const [formData, setFormData] = useState<InviteResidentRequest>({
+    fullName: '',
+    email: '',
+    phone: '',
+    apartmentNumber: '',
+    residentType: 'owner',
+  });
+
+  useEffect(() => {
+    loadData();
+  }, [user?.siteId]);
+
+  const loadData = async () => {
+    if (!user?.siteId) {
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
+
+    try {
+      const [residentsData, blocksData] = await Promise.all([
+        residentService.getResidents(),
+        siteService.getSiteBlocks(user.siteId),
+      ]);
+      setResidents(residentsData);
+      setBlocks(blocksData);
+    } catch (error) {
+      console.error('Load data error:', error);
+      Alert.alert('Hata', 'Veriler yüklenemedi');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadData();
+  };
+
+  const handleBlockPress = (block: Block) => {
+    setSelectedBlock(block);
+    setViewMode('residents');
+  };
+
+  const handleBackToBlocks = () => {
+    setSelectedBlock(null);
+    setViewMode('blocks');
+    setSearchQuery('');
+  };
+
+  const getBlockResidents = () => {
+    if (!selectedBlock) return [];
+    return residents.filter(r => r.blockName === selectedBlock.name);
+  };
+
+  const filteredResidents = getBlockResidents().filter(resident =>
+    resident.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    resident.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    resident.phone.includes(searchQuery)
+  );
+
+  const handleInvite = async () => {
+    if (!formData.fullName || !formData.email || !formData.apartmentNumber) {
+      Alert.alert('Hata', 'Lütfen tüm alanları doldurun');
+      return;
+    }
+
+    if (!user?.siteId) {
+      Alert.alert('Hata', 'Site bilgisi bulunamadı');
+      return;
+    }
+
+    try {
+      await residentService.inviteResident(formData, user.siteId);
+      Alert.alert('Başarılı', 'Davet gönderildi');
+      setShowAddModal(false);
+      resetForm();
+      loadData();
+    } catch (error) {
+      console.error('Invite error:', error);
+      Alert.alert('Hata', 'Davet gönderilemedi');
+    }
+  };
+
+  const handleEdit = async () => {
+    if (!selectedResident || !formData.fullName || !formData.email) {
+      Alert.alert('Hata', 'Lütfen tüm alanları doldurun');
+      return;
+    }
+
+    try {
+      await residentService.updateResident(selectedResident.id, formData);
+      Alert.alert('Başarılı', 'Sakin güncellendi');
+      setShowEditModal(false);
+      setSelectedResident(null);
+      resetForm();
+      loadData();
+    } catch (error) {
+      console.error('Update error:', error);
+      Alert.alert('Hata', 'Güncelleme başarısız');
+    }
+  };
+
+  const handleRemove = async (id: string) => {
+    Alert.alert(
+      'Sakini Kaldır',
+      'Bu sakini kaldırmak istediğinizden emin misiniz?',
+      [
+        { text: 'İptal', style: 'cancel' },
+        {
+          text: 'Kaldır',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await residentService.removeResident(id);
+              Alert.alert('Başarılı', 'Sakin kaldırıldı');
+              loadData();
+            } catch (error) {
+              Alert.alert('Hata', 'Sakin kaldırılamadı');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const openEditModal = (resident: Resident) => {
+    setSelectedResident(resident);
+    setFormData({
+      fullName: resident.fullName,
+      email: resident.email,
+      phone: resident.phone,
+      apartmentNumber: resident.apartmentNumber || '',
+      residentType: resident.residentType,
+    });
+    setShowEditModal(true);
+    setShowActionMenu(null);
+  };
+
+  const resetForm = () => {
+    setFormData({
+      fullName: '',
+      email: '',
+      phone: '',
+      apartmentNumber: '',
+      residentType: 'owner',
+    });
+  };
+
+  const handleAddBlock = async () => {
+    if (!blockFormData.name.trim()) {
+      Alert.alert('Hata', 'Lütfen blok adı girin');
+      return;
+    }
+
+    if (!blockFormData.totalFloors || parseInt(blockFormData.totalFloors) <= 0) {
+      Alert.alert('Hata', 'Lütfen geçerli bir kat sayısı girin');
+      return;
+    }
+
+    if (!user?.siteId) {
+      Alert.alert('Hata', 'Site bilgisi bulunamadı');
+      return;
+    }
+
+    try {
+      await siteService.createBlock(user.siteId, { 
+        name: blockFormData.name.trim(),
+        totalFloors: parseInt(blockFormData.totalFloors),
+      });
+      Alert.alert('Başarılı', 'Blok eklendi');
+      setShowAddBlockModal(false);
+      setBlockFormData({ name: '', totalFloors: '' });
+      loadData();
+    } catch (error) {
+      console.error('Add block error:', error);
+      Alert.alert('Hata', 'Blok eklenemedi');
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="small" color={colors.primary} />
+      </View>
+    );
+  }
+
+  // Blocks View
+  if (viewMode === 'blocks') {
+    return (
+      <View style={styles.container}>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
+          }
+        >
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Bloklar</Text>
+            <Text style={styles.headerSubtitle}>{blocks.length} blok</Text>
+          </View>
+
+          <View style={styles.blocksList}>
+            {blocks.map(block => {
+              const blockResidents = residents.filter(r => r.blockName === block.name);
+              const ownerCount = blockResidents.filter(r => r.residentType === 'owner').length;
+              const tenantCount = blockResidents.filter(r => r.residentType === 'tenant').length;
+
+              return (
+                <Pressable
+                  key={block.id}
+                  style={styles.blockCard}
+                  onPress={() => handleBlockPress(block)}
+                >
+                  <View style={styles.blockIcon}>
+                    <Building2 size={24} color={colors.primary} />
+                  </View>
+                  <View style={styles.blockInfo}>
+                    <Text style={styles.blockName}>{block.name} Blok</Text>
+                    <Text style={styles.blockStats}>
+                      {blockResidents.length} sakin • {ownerCount} malik • {tenantCount} kiracı
+                    </Text>
+                  </View>
+                  <ChevronRight size={20} color={colors.textSecondary} />
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {blocks.length === 0 && (
+            <View style={styles.emptyState}>
+              <Building2 size={48} color={colors.textSecondary} style={{ opacity: 0.5 }} />
+              <Text style={styles.emptyText}>Blok bulunamadı</Text>
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Add Block Button */}
+        <View style={styles.floatingButtonContainer}>
+          <Pressable style={styles.floatingButton} onPress={() => setShowAddBlockModal(true)}>
+            <Building2 size={20} color={colors.white} />
+            <Text style={styles.floatingButtonText}>Yeni Blok Ekle</Text>
+          </Pressable>
+        </View>
+
+        {/* Add Block Modal */}
+        <Modal 
+          visible={showAddBlockModal} 
+          transparent 
+          animationType="slide" 
+          onRequestClose={() => {
+            setShowAddBlockModal(false);
+            setBlockFormData({ name: '', totalFloors: '' });
+          }}
+        >
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Yeni Blok Ekle</Text>
+                <Pressable onPress={() => {
+                  setShowAddBlockModal(false);
+                  setBlockFormData({ name: '', totalFloors: '' });
+                }}>
+                  <X size={24} color={colors.textPrimary} />
+                </Pressable>
+              </View>
+
+              <View style={styles.modalScroll}>
+                <View style={styles.formGroup}>
+                  <Text style={styles.label}>Blok Adı</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Örn: A, B, C veya 1, 2, 3"
+                    placeholderTextColor={colors.textSecondary}
+                    value={blockFormData.name}
+                    onChangeText={(text) => setBlockFormData({ ...blockFormData, name: text })}
+                    autoFocus
+                  />
+                  <Text style={styles.helperText}>
+                    Blok adı genellikle tek harf veya rakam olur (A, B, C veya 1, 2, 3)
+                  </Text>
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.label}>Toplam Kat Sayısı</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Örn: 5"
+                    placeholderTextColor={colors.textSecondary}
+                    keyboardType="numeric"
+                    value={blockFormData.totalFloors}
+                    onChangeText={(text) => setBlockFormData({ ...blockFormData, totalFloors: text })}
+                  />
+                  <Text style={styles.helperText}>
+                    Bloktaki toplam kat sayısını girin
+                  </Text>
+                </View>
+
+                <Pressable style={styles.submitButton} onPress={handleAddBlock}>
+                  <Building2 size={16} color={colors.white} />
+                  <Text style={styles.submitButtonText}>Blok Ekle</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </View>
+    );
+  }
+
+  // Residents View
+  const blockResidents = getBlockResidents();
+  const ownerCount = blockResidents.filter(r => r.residentType === 'owner').length;
+  const tenantCount = blockResidents.filter(r => r.residentType === 'tenant').length;
+
+  return (
+    <View style={styles.container}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
+        }
+      >
+        {/* Header with Back Button */}
+        <Pressable style={styles.backButton} onPress={handleBackToBlocks}>
+          <ChevronRight size={20} color={colors.primary} style={{ transform: [{ rotate: '180deg' }] }} />
+          <Text style={styles.backButtonText}>Bloklar</Text>
+        </Pressable>
+
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>{selectedBlock?.name} Blok Sakinleri</Text>
+          <Text style={styles.headerSubtitle}>{blockResidents.length} sakin</Text>
+        </View>
+
+        {/* Stats */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{blockResidents.length}</Text>
+            <Text style={styles.statLabel}>Toplam</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={[styles.statValue, { color: colors.success }]}>{ownerCount}</Text>
+            <Text style={styles.statLabel}>Malik</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={[styles.statValue, { color: colors.info }]}>{tenantCount}</Text>
+            <Text style={styles.statLabel}>Kiracı</Text>
+          </View>
+        </View>
+
+        {/* Search and Add */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputContainer}>
+            <Search size={16} color={colors.textSecondary} style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Sakin ara..."
+              placeholderTextColor={colors.textSecondary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+          <Pressable style={styles.addButton} onPress={() => setShowAddModal(true)}>
+            <UserPlus size={16} color={colors.white} />
+          </Pressable>
+        </View>
+
+        {/* Residents List */}
+        <View style={styles.residentsList}>
+          {filteredResidents.map(resident => (
+            <View key={resident.id} style={styles.residentCard}>
+              <View style={styles.residentHeader}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {resident.fullName.split(' ').map(n => n[0]).join('')}
+                  </Text>
+                </View>
+                <View style={styles.residentInfo}>
+                  <View style={styles.residentNameRow}>
+                    <Text style={styles.residentName}>{resident.fullName}</Text>
+                    {resident.residentType === 'owner' && (
+                      <Crown size={14} color={colors.warning} />
+                    )}
+                  </View>
+                  <View style={styles.badgeRow}>
+                    <View style={[
+                      styles.badge,
+                      resident.residentType === 'owner' ? styles.badgePrimary : styles.badgeSecondary
+                    ]}>
+                      <Text style={[
+                        styles.badgeText,
+                        resident.residentType === 'owner' ? styles.badgeTextPrimary : styles.badgeTextSecondary
+                      ]}>
+                        {resident.residentType === 'owner' ? 'Kat Maliki' : 'Kiracı'}
+                      </Text>
+                    </View>
+                  </View>
+                  {resident.apartmentNumber && (
+                    <View style={styles.apartmentInfo}>
+                      <Home size={12} color={colors.textSecondary} />
+                      <Text style={styles.apartmentText}>Daire {resident.apartmentNumber}</Text>
+                    </View>
+                  )}
+                  <View style={styles.contactInfo}>
+                    <Phone size={12} color={colors.textSecondary} />
+                    <Text style={styles.contactText}>{resident.phone}</Text>
+                  </View>
+                </View>
+                <Pressable
+                  style={styles.menuButton}
+                  onPress={() => setShowActionMenu(showActionMenu === resident.id ? null : resident.id)}
+                >
+                  <MoreVertical size={16} color={colors.textSecondary} />
+                </Pressable>
+              </View>
+
+              {/* Action Menu */}
+              {showActionMenu === resident.id && (
+                <View style={styles.actionMenu}>
+                  <Pressable
+                    style={styles.actionMenuItem}
+                    onPress={() => openEditModal(resident)}
+                  >
+                    <Edit size={14} color={colors.textPrimary} />
+                    <Text style={styles.actionMenuText}>Düzenle</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.actionMenuItem}
+                    onPress={() => {
+                      handleRemove(resident.id);
+                      setShowActionMenu(null);
+                    }}
+                  >
+                    <Trash2 size={14} color={colors.error} />
+                    <Text style={[styles.actionMenuText, { color: colors.error }]}>Kaldır</Text>
+                  </Pressable>
+                </View>
+              )}
+            </View>
+          ))}
+        </View>
+
+        {filteredResidents.length === 0 && (
+          <View style={styles.emptyState}>
+            <Building2 size={48} color={colors.textSecondary} style={{ opacity: 0.5 }} />
+            <Text style={styles.emptyText}>Sakin bulunamadı</Text>
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Add/Edit Modal */}
+      <Modal 
+        visible={showAddModal || showEditModal} 
+        transparent 
+        animationType="slide" 
+        onRequestClose={() => {
+          setShowAddModal(false);
+          setShowEditModal(false);
+          resetForm();
+        }}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {showEditModal ? 'Sakin Düzenle' : 'Sakin Davet Et'}
+              </Text>
+              <Pressable onPress={() => {
+                setShowAddModal(false);
+                setShowEditModal(false);
+                resetForm();
+              }}>
+                <X size={24} color={colors.textPrimary} />
+              </Pressable>
+            </View>
+
+            <ScrollView style={styles.modalScroll}>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Ad Soyad</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Örn: Ahmet Yılmaz"
+                  placeholderTextColor={colors.textSecondary}
+                  value={formData.fullName}
+                  onChangeText={(text) => setFormData({ ...formData, fullName: text })}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>E-posta</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="ornek@email.com"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="email-address"
+                  value={formData.email}
+                  onChangeText={(text) => setFormData({ ...formData, email: text })}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Telefon</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="+90 555 123 4567"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="phone-pad"
+                  value={formData.phone}
+                  onChangeText={(text) => setFormData({ ...formData, phone: text })}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Daire No</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Örn: 12"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="numeric"
+                  value={formData.apartmentNumber}
+                  onChangeText={(text) => setFormData({ ...formData, apartmentNumber: text })}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Sakin Tipi</Text>
+                <View style={styles.radioGroup}>
+                  <Pressable
+                    style={[styles.radioButton, formData.residentType === 'owner' && styles.radioButtonActive]}
+                    onPress={() => setFormData({ ...formData, residentType: 'owner' })}
+                  >
+                    <Text style={[styles.radioText, formData.residentType === 'owner' && styles.radioTextActive]}>
+                      Kat Maliki
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.radioButton, formData.residentType === 'tenant' && styles.radioButtonActive]}
+                    onPress={() => setFormData({ ...formData, residentType: 'tenant' })}
+                  >
+                    <Text style={[styles.radioText, formData.residentType === 'tenant' && styles.radioTextActive]}>
+                      Kiracı
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              <Pressable 
+                style={styles.submitButton} 
+                onPress={showEditModal ? handleEdit : handleInvite}
+              >
+                {showEditModal ? <Edit size={16} color={colors.white} /> : <UserPlus size={16} color={colors.white} />}
+                <Text style={styles.submitButtonText}>
+                  {showEditModal ? 'Güncelle' : 'Davet Gönder'}
+                </Text>
+              </Pressable>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+};
+                />
+                <Text style={styles.helperText}>
+                  Blok adı genellikle tek harf veya rakam olur (A, B, C veya 1, 2, 3)
+                </Text>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Toplam Kat Sayısı</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Örn: 5"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="numeric"
+                  value={blockFormData.totalFloors}
+                  onChangeText={(text) => setBlockFormData({ ...blockFormData, totalFloors: text })}
+                />
+                <Text style={styles.helperText}>
+                  Bloktaki toplam kat sayısını girin
+                </Text>
+              </View>
+
+              <Pressable style={styles.submitButton} onPress={handleAddBlock}>
+                <Building2 size={16} color={colors.white} />
+                <Text style={styles.submitButtonText}>Blok Ekle</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.backgroundSecondary },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  content: { flex: 1 },
+  scrollContent: { padding: spacing.screenPaddingHorizontal, paddingBottom: 100 },
+  
+  header: { marginBottom: spacing.lg },
+  headerTitle: { fontSize: fontSize['2xl'], fontWeight: fontWeight.bold, color: colors.textPrimary },
+  headerSubtitle: { fontSize: fontSize.cardSubtitle, color: colors.textSecondary, marginTop: 4 },
+  
+  backButton: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
+  backButtonText: { fontSize: fontSize.cardTitle, fontWeight: fontWeight.medium, color: colors.primary, marginLeft: 4 },
+  
+  blocksList: { gap: spacing.md },
+  blockCard: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: colors.white, 
+    borderRadius: borderRadius.card, 
+    padding: spacing.lg, 
+    borderWidth: 1, 
+    borderColor: colors.border 
+  },
+  blockIcon: { 
+    width: 48, 
+    height: 48, 
+    borderRadius: borderRadius.icon, 
+    backgroundColor: colors.primaryLight, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    marginRight: spacing.md 
+  },
+  blockInfo: { flex: 1 },
+  blockName: { fontSize: fontSize.cardTitle, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  blockStats: { fontSize: fontSize.cardMeta, color: colors.textSecondary, marginTop: 4 },
+  
+  statsContainer: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
+  statCard: { 
+    flex: 1, 
+    backgroundColor: colors.white, 
+    borderRadius: borderRadius.card, 
+    padding: spacing.md, 
+    alignItems: 'center', 
+    borderWidth: 1, 
+    borderColor: colors.border 
+  },
+  statValue: { fontSize: fontSize['2xl'], fontWeight: fontWeight.bold, color: colors.primary },
+  statLabel: { fontSize: fontSize.cardMeta, color: colors.textSecondary, marginTop: 4 },
+  
+  searchContainer: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  searchInputContainer: { 
+    flex: 1, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: colors.white, 
+    borderRadius: borderRadius.input, 
+    borderWidth: 1, 
+    borderColor: colors.border, 
+    paddingHorizontal: spacing.md 
+  },
+  searchIcon: { marginRight: spacing.sm },
+  searchInput: { flex: 1, height: 40, fontSize: fontSize.inputText, color: colors.textPrimary },
+  addButton: { 
+    width: 40, 
+    height: 40, 
+    backgroundColor: colors.primary, 
+    borderRadius: borderRadius.button, 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
+  
+  residentsList: { gap: spacing.sm },
+  residentCard: { 
+    backgroundColor: colors.white, 
+    borderRadius: borderRadius.card, 
+    padding: spacing.md, 
+    borderWidth: 1, 
+    borderColor: colors.border 
+  },
+  residentHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  avatar: { 
+    width: 48, 
+    height: 48, 
+    borderRadius: borderRadius.full, 
+    backgroundColor: colors.primaryLight, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    borderWidth: 2, 
+    borderColor: colors.primary + '20' 
+  },
+  avatarText: { fontSize: fontSize.cardTitle, fontWeight: fontWeight.semibold, color: colors.primary },
+  residentInfo: { flex: 1 },
+  residentNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  residentName: { fontSize: fontSize.cardTitle, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  badgeRow: { flexDirection: 'row', gap: spacing.xs, marginTop: 4 },
+  badge: { paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: borderRadius.sm },
+  badgePrimary: { backgroundColor: colors.primary },
+  badgeSecondary: { backgroundColor: colors.gray200 },
+  badgeText: { fontSize: 10, fontWeight: fontWeight.semibold },
+  badgeTextPrimary: { color: colors.white },
+  badgeTextSecondary: { color: colors.textSecondary },
+  apartmentInfo: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: spacing.sm },
+  apartmentText: { fontSize: fontSize.cardMeta, color: colors.textSecondary },
+  contactInfo: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  contactText: { fontSize: fontSize.cardMeta, color: colors.textSecondary },
+  menuButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+  
+  actionMenu: { 
+    marginTop: spacing.md, 
+    paddingTop: spacing.md, 
+    borderTopWidth: 1, 
+    borderTopColor: colors.border,
+    gap: spacing.sm,
+  },
+  actionMenuItem: { 
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm 
+  },
+  actionMenuText: { fontSize: fontSize.cardSubtitle, color: colors.textPrimary },
+  
+  emptyState: { alignItems: 'center', paddingVertical: spacing['3xl'] },
+  emptyText: { fontSize: fontSize.cardSubtitle, color: colors.textSecondary, marginTop: spacing.md },
+  
+  floatingButtonContainer: { 
+    position: 'absolute', 
+    bottom: spacing.xl, 
+    left: spacing.screenPaddingHorizontal, 
+    right: spacing.screenPaddingHorizontal 
+  },
+  floatingButton: { 
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary, 
+    padding: spacing.lg, 
+    borderRadius: borderRadius.button,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  floatingButtonText: { 
+    fontSize: fontSize.buttonText, 
+    fontWeight: fontWeight.semibold, 
+    color: colors.white 
+  },
+  
+  helperText: { 
+    fontSize: fontSize.cardMeta, 
+    color: colors.textSecondary, 
+    marginTop: spacing.sm,
+    fontStyle: 'italic' 
+  },
+  
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { 
+    backgroundColor: colors.white, 
+    borderTopLeftRadius: borderRadius.cardLg, 
+    borderTopRightRadius: borderRadius.cardLg, 
+    maxHeight: '90%' 
+  },
+  modalHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    padding: spacing.xl, 
+    borderBottomWidth: 1, 
+    borderBottomColor: colors.border 
+  },
+  modalTitle: { fontSize: fontSize['2xl'], fontWeight: fontWeight.bold, color: colors.textPrimary },
+  modalScroll: { padding: spacing.xl },
+  
+  formGroup: { marginBottom: spacing.lg },
+  label: { fontSize: fontSize.cardSubtitle, fontWeight: fontWeight.medium, color: colors.textPrimary, marginBottom: spacing.sm },
+  input: { 
+    borderWidth: 1, 
+    borderColor: colors.border, 
+    borderRadius: borderRadius.input, 
+    paddingHorizontal: spacing.md, 
+    paddingVertical: spacing.md, 
+    fontSize: fontSize.inputText, 
+    color: colors.textPrimary 
+  },
+  radioGroup: { flexDirection: 'row', gap: spacing.sm },
+  radioButton: { 
+    flex: 1, 
+    paddingVertical: spacing.md, 
+    borderRadius: borderRadius.button, 
+    borderWidth: 1, 
+    borderColor: colors.border, 
+    alignItems: 'center', 
+    backgroundColor: colors.white 
+  },
+  radioButtonActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  radioText: { fontSize: fontSize.cardTitle, fontWeight: fontWeight.medium, color: colors.textPrimary },
+  radioTextActive: { color: colors.white },
+  submitButton: { 
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary, 
+    padding: spacing.lg, 
+    borderRadius: borderRadius.button, 
+    marginTop: spacing.md 
+  },
+  submitButtonText: { fontSize: fontSize.buttonText, fontWeight: fontWeight.semibold, color: colors.white },
+});
+
+export default AdminResidents;

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "96638917523",
+    "project_id": "smart-site-management",
+    "storage_bucket": "smart-site-management.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:96638917523:android:69eaa0abdef1cca62b6666",
+        "android_client_info": {
+          "package_name": "com.siteyonetim.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDMiaZbs2-hWjFAG_0HgSboVdKeNnY2hTM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
