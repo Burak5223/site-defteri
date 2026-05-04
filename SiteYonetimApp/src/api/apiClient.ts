@@ -63,12 +63,14 @@ class ApiClient {
     try {
       console.log(`🚀 API Request starting: ${method} ${fullUrl}`);
       
-      // AI cargo photo upload için özel timeout (30 saniye), diğerleri için 20 saniye
+      // AI cargo photo upload için özel timeout (60 saniye), diğerleri için 45 saniye
       const isAICargoUpload = url.includes('/packages/upload-cargo-photo');
-      const timeoutDuration = isAICargoUpload ? 30000 : 20000;
+      const timeoutDuration = isAICargoUpload ? 60000 : 45000;
       
       if (isAICargoUpload) {
         console.log(`⏱️ AI Cargo Upload detected - using extended timeout: ${timeoutDuration}ms`);
+      } else {
+        console.log(`⏱️ Using standard timeout: ${timeoutDuration}ms (45 seconds)`);
       }
       
       // Timeout için Promise.race kullan
