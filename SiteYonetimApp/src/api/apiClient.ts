@@ -5,10 +5,9 @@ const RAILWAY_URL = 'https://site-yonetim-production.up.railway.app/api';
 
 // Dinamik IP - geliştirme sırasında değiştirilebilir
 const BACKEND_IPS = [
-  '10.60.24.246',
-  '172.29.1.55',     // Sunucu IP (Eduroam ağında) - BACKUP
-  '192.168.137.1',   // Current IP - PRIMARY
- 
+  '172.29.1.55',     // Ana Sunucu IP (Eduroam ağında) - PRIMARY
+  '10.60.24.246',    // Windows PC IP - BACKUP
+  '192.168.137.1',   // Hotspot IP - BACKUP
   '192.168.70.211',  // Local Wi-Fi IP - BACKUP
 ];
 
