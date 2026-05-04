@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # MySQL Veritabanı
+  mysql:
+    image: mysql:8.0
+    container_name: site_mysql
+    restart: always
+    network_mode: host
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-Hilton5252.}
+      MYSQL_DATABASE: smart_site_management
+      MYSQL_USER: ${DB_USER:-siteuser}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-Hilton5252.}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Spring Boot Backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: site_backend
+    restart: always
+    network_mode: host
+    environment:
+      # Database
+      DATABASE_URL: jdbc:mysql://localhost:3306/smart_site_management?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      DATABASE_USER: ${DB_USER:-siteuser}
+      DATABASE_PASSWORD: ${DB_PASSWORD:-Hilton5252.}
+      
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437}
+      JWT_EXPIRATION: 86400000
+      
+      # Telegram
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-8515377926:AAHlv_RCqEuKg_A-ULY7QLoC_zUfuvKKSmM}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-sakin_onay_bot}
+      
+      # Gemini AI
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-AIzaSyAJW7oFkPPFKSlE7wmEyz31OoaKWyveqFs}
+      AI_CARGO_ENABLED: ${AI_CARGO_ENABLED:-true}
+      
+      # Server
+      PORT: 8080
+      
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+
+volumes:
+  mysql_data:
+    driver: local

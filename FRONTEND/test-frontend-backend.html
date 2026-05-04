@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend-Backend Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #2196F3;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .credentials {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status.online {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.offline {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Frontend-Backend Integration Test</h1>
+        
+        <div class="credentials">
+            <strong>Test Credentials:</strong><br>
+            Email: admin@site.com<br>
+            Password: admin123
+        </div>
+
+        <div class="test-section">
+            <h3>1. Backend Status Check</h3>
+            <button onclick="checkBackend()">Check Backend</button>
+            <div id="backend-status"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Login Test</h3>
+            <button onclick="testLogin()">Test Login</button>
+            <div id="login-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Get Announcements</h3>
+            <button onclick="getAnnouncements()" id="btn-announcements" disabled>Get Announcements</button>
+            <div id="announcements-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. Create Announcement</h3>
+            <button onclick="createAnnouncement()" id="btn-create-announcement" disabled>Create Announcement</button>
+            <div id="create-announcement-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>5. Get Tasks</h3>
+            <button onclick="getTasks()" id="btn-tasks" disabled>Get Tasks</button>
+            <div id="tasks-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>6. Create Task</h3>
+            <button onclick="createTask()" id="btn-create-task" disabled>Create Task</button>
+            <div id="create-task-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>7. Get Packages</h3>
+            <button onclick="getPackages()" id="btn-packages" disabled>Get Packages</button>
+            <div id="packages-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>8. Get Visitors</h3>
+            <button onclick="getVisitors()" id="btn-visitors" disabled>Get Visitors</button>
+            <div id="visitors-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>9. Run All Tests</h3>
+            <button onclick="runAllTests()">Run All Tests</button>
+            <div id="all-tests-result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8080/api';
+        let token = null;
+
+        async function checkBackend() {
+            const resultDiv = document.getElementById('backend-status');
+            resultDiv.innerHTML = '<div class="result info">Checking backend...</div>';
+            
+            try {
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: 'test', password: 'test' })
+                });
+                
+                resultDiv.innerHTML = `<div class="result success">✅ Backend is ONLINE <span class="status online">RUNNING</span><br>URL: ${API_URL}</div>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Backend is OFFLINE <span class="status offline">NOT RUNNING</span><br>Error: ${error.message}</div>`;
+            }
+        }
+
+        async function testLogin() {
+            const resultDiv = document.getElementById('login-result');
+            resultDiv.innerHTML = '<div class="result info">Logging in...</div>';
+            
+            try {
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'admin@site.com',
+                        password: 'admin123'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                token = data.accessToken;
+                
+                // Enable other buttons
+                document.querySelectorAll('button[id^="btn-"]').forEach(btn => btn.disabled = false);
+                
+                resultDiv.innerHTML = `<div class="result success">✅ Login Successful!<br>Token: ${token.substring(0, 50)}...</div>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Login Failed<br>Error: ${error.message}</div>`;
+            }
+        }
+
+        async function getAnnouncements() {
+            const resultDiv = document.getElementById('announcements-result');
+            resultDiv.innerHTML = '<div class="result info">Fetching announcements...</div>';
+            
+            try {
+                const response = await fetch(`${API_URL}/sites/1/announcements`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                resultDiv.innerHTML = `<div class="result success">✅ Got ${data.length} announcements<br>${JSON.stringify(data, null, 2)}</div>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Failed<br>Error: ${error.message}</div>`;
+            }
+        }
+
+        async function createAnnouncement() {
+            const resultDiv = document.getElementById('create-announcement-result');
+            resultDiv.innerHTML = '<div class="result info">Creating announcement...</div>';
+            
+            try {
+                const response = await fetch(`${API_URL}/sites/1/announcements`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        title: 'Frontend Test Announcement',
+                        content: 'This is created from frontend test',
+                        targetAudience: 'herkes',
+                        priority: 'orta',
+                        isPinned: false
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                resultDiv.innerHTML = `<div class="result success">✅ Announcement Created!<br>ID: ${data.id}<br>${JSON.stringify(data, null, 2)}</div>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Failed<br>Error: ${error.message}</div>`;
+            }
+        }
+
+        async function getTasks() {
+            const resultDiv = document.getElementById('tasks-result');
+            resultDiv.innerHTML = '<div class="result info">Fetching tasks...</div>';
+            
+            try {
+                const response = await fetch(`${API_URL}/sites/1/tasks`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                resultDiv.innerHTML = `<div class="result success">✅ Got ${data.length} tasks<br>${JSON.stringify(data, null, 2)}</div>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Failed<br>Error: ${error.message}</div>`;
+            }
+        }
+
+        async function createTask() {
+            const resultDiv = document.getElementById('create-task-result');
+            resultDiv.innerHTML = '<div class="result info">Creating task...</div>';
+            
+            try {
+                const response = await fetch(`${API_URL}/tasks`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        title: 'Frontend Test Task',
+                        description: 'Created from frontend test',
+                        taskType: 'temizlik',
+                        location: 'A Blok',
+                        dueDate: '2026-02-15',
+                        assignedTo: '1'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                resultDiv.innerHTML = `<div class="result success">✅ Task Created!<br>ID: ${data.id}<br>${JSON.stringify(data, null, 2)}</div>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Failed<br>Error: ${error.message}</div>`;
+            }
+        }
+
+        async function getPackages() {
+            const resultDiv = document.getElementById('packages-result');
+            resultDiv.innerHTML = '<div class="result info">Fetching packages...</div>';
+            
+            try {
+                const response = await fetch(`${API_URL}/packages`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                resultDiv.innerHTML = `<div class="result success">✅ Got ${data.length} packages<br>${JSON.stringify(data, null, 2)}</div>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Failed<br>Error: ${error.message}</div>`;
+            }
+        }
+
+        async function getVisitors() {
+            const resultDiv = document.getElementById('visitors-result');
+            resultDiv.innerHTML = '<div class="result info">Fetching visitors...</div>';
+            
+            try {
+                const response = await fetch(`${API_URL}/visitors`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                resultDiv.innerHTML = `<div class="result success">✅ Got ${data.length} visitors<br>${JSON.stringify(data, null, 2)}</div>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Failed<br>Error: ${error.message}</div>`;
+            }
+        }
+
+        async function runAllTests() {
+            const resultDiv = document.getElementById('all-tests-result');
+            resultDiv.innerHTML = '<div class="result info">Running all tests...</div>';
+            
+            await checkBackend();
+            await new Promise(r => setTimeout(r, 500));
+            
+            await testLogin();
+            await new Promise(r => setTimeout(r, 500));
+            
+            if (token) {
+                await getAnnouncements();
+                await new Promise(r => setTimeout(r, 500));
+                
+                await getTasks();
+                await new Promise(r => setTimeout(r, 500));
+                
+                await getPackages();
+                await new Promise(r => setTimeout(r, 500));
+                
+                await getVisitors();
+                
+                resultDiv.innerHTML = '<div class="result success">✅ All tests completed! Check results above.</div>';
+            } else {
+                resultDiv.innerHTML = '<div class="result error">❌ Cannot run tests - Login failed</div>';
+            }
+        }
+
+        // Auto-check backend on load
+        window.onload = () => {
+            checkBackend();
+        };
+    </script>
+</body>
+</html>

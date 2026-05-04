@@ -1,0 +1,102 @@
+---
+alwaysApply: false
+description: React (web) TypeScript to React Native migration helper prompts (single component, Tailwind, full project, pixel-perfect, mobile adaptation)
+---
+
+## React Web → React Native Component Conversion (Standard CSS)
+
+You are a senior React Native engineer.
+
+Convert this React (web) TypeScript component into a React Native TypeScript component.
+
+**STRICT RULES:**
+- Replace all `div` elements with `View`
+- Replace `span`, `p`, `h1`–`h6` with `Text`
+- Replace `img` with `Image`
+- Replace `button` with `Pressable`
+- Replace `input` with `TextInput`
+- Remove all DOM and browser APIs (`window`, `document`, `localStorage`, etc.)
+- Convert CSS classes and external CSS into `StyleSheet.create`
+- Do **NOT** use any HTML tags
+- Keep the visual layout as identical as possible
+- Maintain spacing, alignment, and flex behavior exactly
+- Preserve TypeScript types
+- Use functional components
+- Export default component
+
+**STYLE RULES:**
+- Convert CSS flexbox to React Native flexbox properly
+- Remove unsupported CSS (`:hover`, `position: fixed`, `grid`, etc. if not supported)
+- If `position: fixed` is used, convert to `position: "absolute"` with appropriate offsets
+- Replace `margin: auto` with proper flex alignment
+- Convert `rem` / `em` to numeric values
+- Remove web-only units (`vh`, `vw`) and use `Dimensions` if necessary
+
+Return **ONLY** the final React Native component code.  
+No explanations.
+
+---
+
+## React + Tailwind → React Native Component Conversion
+
+Convert this React + Tailwind TypeScript component into React Native TypeScript.
+
+**RULES:**
+- Replace all HTML elements with React Native equivalents
+- Convert Tailwind classes into `StyleSheet` styles manually
+- Keep layout visually identical
+- Preserve spacing scale exactly
+- Convert flex utilities properly
+- Remove `hover:`, `focus:`, `group-`, and other web-only utilities
+- Convert responsive classes (`sm:`, `md:`, `lg:`) into `Dimensions`-based logic if needed
+- Keep TypeScript types
+- Output only valid React Native code
+
+---
+
+## Full Project Migration Plan (React Web → React Native)
+
+We are migrating this entire React (web) TypeScript project to React Native.
+
+Create a migration plan and then refactor files step-by-step.
+
+**Requirements:**
+- Replace all HTML elements with React Native equivalents
+- Remove DOM APIs
+- Replace React Router with React Navigation
+- Replace CSS files with `StyleSheet`
+- Convert layout system to React Native flexbox
+- Replace `localStorage` with `AsyncStorage`
+- Ensure TypeScript types are preserved
+- Maintain visual similarity as much as possible
+- List files that require manual adjustment
+
+Start by analyzing the project structure.
+
+---
+
+## Pixel-Perfect Layout Constraint (Optional Add-on)
+
+Make the layout visually identical to the original web version.
+
+Spacing, alignment, font size, padding, and flex behavior must match exactly.  
+If something cannot be replicated exactly in React Native, suggest the closest alternative.
+
+---
+
+## Desktop Web → Mobile-First React Native Adaptation (Optional Add-on)
+
+Adapt this desktop web layout into a mobile-first React Native layout.
+
+Keep the visual identity but optimize for mobile UX.  
+Preserve design language, spacing scale, and hierarchy.
+
+---
+
+## Practical Notes / Warnings
+
+- If CSS Grid is used, manual layout adjustments in flexbox will be required.
+- For complex animations, plan to use `react-native-reanimated`.
+- If UI libraries like MUI / Ant Design are used, those components must be rewritten with React Native primitives or a compatible UI library.
+- A 100% automatic conversion is not realistic, but these prompts should accelerate the process by roughly 70–85%.
+

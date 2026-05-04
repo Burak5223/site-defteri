@@ -1,0 +1,171 @@
+// Bu fonksiyonları ResidentDues.tsx dosyasına handlePayment fonksiyonundan sonra ekleyin:
+
+  const generateReceiptHTML = (due: any) => {
+    const currentDate = new Date().toLocaleDateString('tr-TR');
+    const currentTime = new Date().toLocaleTimeString('tr-TR');
+    
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            font-family: 'Helvetica', 'Arial', sans-serif; 
+            padding: 40px; 
+            background: #fff;
+            color: #333;
+          }
+          .receipt-container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            border: 2px solid #2563eb;
+            border-radius: 12px;
+            overflow: hidden;
+          }
+          .header { 
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white; 
+            padding: 30px; 
+            text-align: center;
+          }
+          .header h1 { 
+            font-size: 28px; 
+            margin-bottom: 8px;
+            font-weight: 700;
+          }
+          .content { 
+            padding: 30px;
+          }
+          .section { 
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e5e7eb;
+          }
+          .section-title { 
+            font-size: 16px; 
+            font-weight: 600; 
+            color: #2563eb;
+            margin-bottom: 15px;
+          }
+          .info-row { 
+            display: flex; 
+            justify-content: space-between; 
+            padding: 10px 0;
+            font-size: 14px;
+          }
+          .info-label { 
+            color: #6b7280; 
+            font-weight: 500;
+          }
+          .info-value { 
+            color: #111827; 
+            font-weight: 600;
+            text-align: right;
+          }
+          .amount-box { 
+            background: #f0f9ff;
+            border: 2px solid #2563eb;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+          }
+          .amount-value { 
+            font-size: 32px; 
+            font-weight: 700; 
+            color: #2563eb;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="receipt-container">
+          <div class="header">
+            <h1>ÖDEME MAKBUZU</h1>
+            <p>Site Yönetim Sistemi</p>
+          </div>
+          
+          <div class="content">
+            <div class="section">
+              <div class="section-title">Sakin Bilgileri</div>
+              <div class="info-row">
+                <span class="info-label">Ad Soyad:</span>
+                <span class="info-value">${user?.fullName || 'Sakin'}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Daire No:</span>
+                <span class="info-value">${due.apartmentNumber || '-'}</span>
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="section-title">Ödeme Detayları</div>
+              <div class="info-row">
+                <span class="info-label">Aidat Dönemi:</span>
+                <span class="info-value">${due.month} ${due.year}</span>
+              </div>
+            </div>
+
+            <div class="amount-box">
+              <div class="amount-value">₺${due.amount.toLocaleString('tr-TR')},00</div>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  };
+
+  const handleDownloadReceipt = async (due: any) => {
+    try {
+      // İzin kontrolü
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('İzin Gerekli', 'Makbuzu kaydetmek için medya kütüphanesine erişim izni gerekiyor.');
+        return;
+      }
+
+      Alert.alert(
+        'Makbuz İndir',
+        'Ödeme makbuzunuzu PDF olarak kaydetmek istiyor musunuz?',
+        [
+          { text: 'İptal', style: 'cancel' },
+          {
+            text: 'Kaydet',
+            onPress: async () => {
+              try {
+                // Generate PDF
+                const html = generateReceiptHTML(due);
+                const { uri } = await Print.printToFileAsync({ html });
+                
+                // Dosya adı oluştur
+                const fileName = `Makbuz_${due.period}_${Date.now()}.pdf`;
+                
+                // Geçici dosyayı kalıcı konuma taşı
+                const fileUri = FileSystem.documentDirectory + fileName;
+                await FileSystem.copyAsync({
+                  from: uri,
+                  to: fileUri,
+                });
+                
+                // MediaLibrary'ye kaydet (Downloads klasörüne)
+                const asset = await MediaLibrary.createAssetAsync(fileUri);
+                await MediaLibrary.createAlbumAsync('Download', asset, false);
+                
+                Alert.alert('Başarılı', `Makbuz indirildi:\n${fileName}\n\nİndirilenler klasöründen erişebilirsiniz.`);
+              } catch (error) {
+                console.error('PDF save error:', error);
+                Alert.alert('Hata', 'Makbuz kaydedilirken bir hata oluştu');
+              }
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Download receipt error:', error);
+      Alert.alert('Hata', 'Makbuz kaydedilemedi');
+    }
+  };

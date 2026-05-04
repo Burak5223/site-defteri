@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paket Takip Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            margin-right: 10px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .packages {
+            display: grid;
+            gap: 15px;
+        }
+        .package-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        .package-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+        }
+        .package-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+        }
+        .package-info h3 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .package-info p {
+            color: #666;
+            font-size: 14px;
+        }
+        .package-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .package-status.waiting {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .package-status.delivered {
+            background: #d4edda;
+            color: #155724;
+        }
+        .package-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        .detail-item {
+            font-size: 14px;
+        }
+        .detail-label {
+            color: #666;
+            font-weight: 500;
+        }
+        .detail-value {
+            color: #333;
+            margin-top: 2px;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 18px;
+        }
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📦 Paket Takip Sistemi</h1>
+            <p>Backend API Test - <span id="apiStatus" class="status warning">Bağlanıyor...</span></p>
+        </div>
+
+        <div class="stats" id="stats" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-value" id="totalCount">0</div>
+                <div class="stat-label">Toplam Paket</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="waitingCount">0</div>
+                <div class="stat-label">Bekleyen</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="deliveredCount">0</div>
+                <div class="stat-label">Teslim Edilen</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button onclick="loadPackages()">🔄 Yenile</button>
+            <button onclick="filterPackages('all')">Tümü</button>
+            <button onclick="filterPackages('waiting')">Bekleyen</button>
+            <button onclick="filterPackages('delivered')">Teslim Edilen</button>
+        </div>
+
+        <div id="error" class="error-message" style="display: none;"></div>
+        <div id="loading" class="loading">Paketler yükleniyor...</div>
+        <div id="packages" class="packages"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8080/api';
+        let allPackages = [];
+        let currentFilter = 'all';
+
+        async function login() {
+            try {
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'admin@site.com',
+                        password: 'admin123'
+                    })
+                });
+                const data = await response.json();
+                return data.accessToken;
+            } catch (error) {
+                console.error('Login error:', error);
+                throw error;
+            }
+        }
+
+        async function loadPackages() {
+            const loading = document.getElementById('loading');
+            const packagesDiv = document.getElementById('packages');
+            const errorDiv = document.getElementById('error');
+            const statusSpan = document.getElementById('apiStatus');
+            const statsDiv = document.getElementById('stats');
+
+            loading.style.display = 'block';
+            packagesDiv.innerHTML = '';
+            errorDiv.style.display = 'none';
+
+            try {
+                const token = await login();
+                statusSpan.textContent = 'Bağlı';
+                statusSpan.className = 'status success';
+
+                const response = await fetch(`${API_URL}/packages`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('API hatası');
+
+                allPackages = await response.json();
+                loading.style.display = 'none';
+                
+                updateStats();
+                statsDiv.style.display = 'grid';
+                displayPackages(allPackages);
+            } catch (error) {
+                loading.style.display = 'none';
+                statusSpan.textContent = 'Bağlantı Hatası';
+                statusSpan.className = 'status error';
+                errorDiv.textContent = `Hata: ${error.message}. Backend çalışıyor mu kontrol edin.`;
+                errorDiv.style.display = 'block';
+                console.error('Error:', error);
+            }
+        }
+
+        function updateStats() {
+            const total = allPackages.length;
+            const waiting = allPackages.filter(p => 
+                p.status === 'BEKLEMEDE' || p.status === 'received'
+            ).length;
+            const delivered = allPackages.filter(p => 
+                p.status === 'TESLIM_EDILDI' || p.status === 'delivered'
+            ).length;
+
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('waitingCount').textContent = waiting;
+            document.getElementById('deliveredCount').textContent = delivered;
+        }
+
+        function filterPackages(filter) {
+            currentFilter = filter;
+            let filtered = allPackages;
+
+            if (filter === 'waiting') {
+                filtered = allPackages.filter(p => 
+                    p.status === 'BEKLEMEDE' || p.status === 'received'
+                );
+            } else if (filter === 'delivered') {
+                filtered = allPackages.filter(p => 
+                    p.status === 'TESLIM_EDILDI' || p.status === 'delivered'
+                );
+            }
+
+            displayPackages(filtered);
+        }
+
+        function displayPackages(packages) {
+            const packagesDiv = document.getElementById('packages');
+
+            if (packages.length === 0) {
+                packagesDiv.innerHTML = `
+                    <div class="empty-state">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                        </svg>
+                        <h3>Paket Bulunamadı</h3>
+                        <p style="color: #666; margin-top: 10px;">
+                            ${currentFilter === 'all' ? 'Henüz paket kaydı yok' : 
+                              currentFilter === 'waiting' ? 'Bekleyen paket yok' : 
+                              'Teslim edilen paket yok'}
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            packagesDiv.innerHTML = packages.map(pkg => {
+                const isDelivered = pkg.status === 'TESLIM_EDILDI' || pkg.status === 'delivered';
+                const statusText = isDelivered ? 'Teslim Edildi' : 'Bekliyor';
+                const statusClass = isDelivered ? 'delivered' : 'waiting';
+                
+                const receivedDate = pkg.receivedAt || pkg.recordedAt;
+                const deliveredDate = pkg.deliveredAt;
+
+                return `
+                    <div class="package-card">
+                        <div class="package-header">
+                            <div class="package-info">
+                                <h3>${pkg.courierName || 'Kargo Firması Belirtilmemiş'}</h3>
+                                <p style="font-family: monospace; color: #667eea; font-weight: 600;">
+                                    ${pkg.trackingNumber}
+                                </p>
+                            </div>
+                            <span class="package-status ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="package-details">
+                            <div class="detail-item">
+                                <div class="detail-label">Daire</div>
+                                <div class="detail-value">Daire ${pkg.apartmentId}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Geliş Tarihi</div>
+                                <div class="detail-value">
+                                    ${receivedDate ? new Date(receivedDate).toLocaleString('tr-TR') : '-'}
+                                </div>
+                            </div>
+                            ${deliveredDate ? `
+                                <div class="detail-item">
+                                    <div class="detail-label">Teslim Tarihi</div>
+                                    <div class="detail-value">
+                                        ${new Date(deliveredDate).toLocaleString('tr-TR')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Sayfa yüklendiğinde paketleri getir
+        loadPackages();
+
+        // Her 30 saniyede bir otomatik yenile
+        setInterval(loadPackages, 30000);
+    </script>
+</body>
+</html>

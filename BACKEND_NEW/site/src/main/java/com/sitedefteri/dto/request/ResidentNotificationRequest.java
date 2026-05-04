@@ -1,0 +1,30 @@
+package com.sitedefteri.dto.request;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+/**
+ * Request DTO for resident cargo notification ("Kargom Var")
+ * residentId, siteId, apartmentId, fullName will be populated from JWT token
+ */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class ResidentNotificationRequest {
+
+    // These fields will be populated from JWT token by the controller
+    private String residentId;
+    private String siteId;
+    private String apartmentId;
+    private String fullName;
+
+    @NotBlank(message = "Kargo şirketi adı zorunludur")
+    private String cargoCompany;
+
+    private String expectedDate; // Format: YYYY-MM-DD
+    
+    private String notes; // Optional notes
+}
