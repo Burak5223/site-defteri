@@ -21,13 +21,13 @@ public class BlockController {
     
     private final BlockService blockService;
     
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'SECURITY', 'CLEANING', 'ROLE_RESIDENT')")
     @GetMapping
     public ResponseEntity<List<BlockResponse>> getBlocks(@PathVariable String siteId) {
         return ResponseEntity.ok(blockService.getBlocksBySite(siteId));
     }
     
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'SECURITY', 'CLEANING', 'ROLE_RESIDENT')")
     @GetMapping("/{id}")
     public ResponseEntity<BlockResponse> getBlock(@PathVariable String siteId, @PathVariable String id) {
         return ResponseEntity.ok(blockService.getBlockById(id));
