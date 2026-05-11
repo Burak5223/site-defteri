@@ -55,7 +55,7 @@ const ResidentPackages = () => {
     if (!user?.apartmentId) {
       Alert.alert(
         'Kullanıcı Bilgileri Eksik',
-        'Daire bilginiz eksik. Lütfen profil ayarlarınızdan daire bilginizi güncelleyin.',
+        'Daire bilginiz eksik. Lütfen çıkış yapıp tekrar giriş yapın.',
         [
           { text: 'Tamam' }
         ]

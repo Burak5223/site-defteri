@@ -18,6 +18,8 @@ public class MessageResponse {
     private String senderName;
     private String senderRole;
     private String receiverId;
+    private String receiverName;
+    private String receiverRole;
     private String apartmentId;
     private String apartmentNumber;
     private String chatType;

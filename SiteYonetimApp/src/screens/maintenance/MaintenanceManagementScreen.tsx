@@ -38,6 +38,9 @@ const MaintenanceManagementScreen = () => {
 
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+  const [showPeriodDropdown, setShowPeriodDropdown] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Form states
   const [equipmentName, setEquipmentName] = useState('');
@@ -45,6 +48,9 @@ const MaintenanceManagementScreen = () => {
   const [lastMaintenanceDate, setLastMaintenanceDate] = useState(new Date().toISOString().split('T')[0]);
   const [maintenancePeriod, setMaintenancePeriod] = useState('30 Gün (Aylık)');
   const [notes, setNotes] = useState('');
+
+  const equipmentTypes = ['Asansör', 'Jeneratör', 'Yangın Söndürme', 'Hidrofor', 'Isıtma Sistemi', 'Soğutma Sistemi', 'Diğer'];
+  const maintenancePeriods = ['30 Gün (Aylık)', '90 Gün (3 Aylık)', '180 Gün (6 Aylık)', '365 Gün (Yıllık)'];
 
   useEffect(() => {
     loadData();
@@ -96,6 +102,8 @@ const MaintenanceManagementScreen = () => {
     setLastMaintenanceDate(new Date().toISOString().split('T')[0]);
     setMaintenancePeriod('30 Gün (Aylık)');
     setNotes('');
+    setShowTypeDropdown(false);
+    setShowPeriodDropdown(false);
   };
 
   const handleAdd = async () => {
@@ -267,7 +275,13 @@ const MaintenanceManagementScreen = () => {
               </Pressable>
             </View>
 
-            <ScrollView style={styles.modalBody}>
+            <ScrollView 
+              style={styles.modalBody}
+              onTouchStart={() => {
+                setShowTypeDropdown(false);
+                setShowPeriodDropdown(false);
+              }}
+            >
               <View style={styles.formGroup}>
                 <Text style={styles.label}>{t('maintenanceManagement.equipmentName')}</Text>
                 <TextInput
@@ -281,27 +295,77 @@ const MaintenanceManagementScreen = () => {
 
               <View style={styles.formGroup}>
                 <Text style={styles.label}>{t('maintenanceManagement.equipmentType')}</Text>
-                <Pressable style={styles.selectInput}>
-                  <Text style={styles.selectText}>{t('maintenanceManagement.elevator')}</Text>
+                <Pressable 
+                  style={styles.selectInput}
+                  onPress={() => setShowTypeDropdown(!showTypeDropdown)}
+                >
+                  <Text style={styles.selectText}>{equipmentType}</Text>
                   <ChevronDown size={16} color="#64748b" />
                 </Pressable>
+                {showTypeDropdown && (
+                  <View style={styles.dropdown}>
+                    {equipmentTypes.map((type) => (
+                      <Pressable
+                        key={type}
+                        style={styles.dropdownItem}
+                        onPress={() => {
+                          setEquipmentType(type);
+                          setShowTypeDropdown(false);
+                        }}
+                      >
+                        <Text style={[
+                          styles.dropdownItemText,
+                          equipmentType === type && styles.dropdownItemTextActive
+                        ]}>
+                          {type}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
               </View>
 
               <View style={styles.formGroup}>
                 <Text style={styles.label}>{t('maintenanceManagement.lastMaintenanceDate')}</Text>
-                <Pressable style={styles.selectInput}>
-                  <Calendar size={16} color="#64748b" />
-                  <Text style={[styles.selectText, { marginLeft: 8 }]}>13.02.2026</Text>
-                  <ChevronDown size={16} color="#64748b" style={{ marginLeft: 'auto' }} />
-                </Pressable>
+                <TextInput
+                  style={styles.input}
+                  value={lastMaintenanceDate}
+                  onChangeText={setLastMaintenanceDate}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor="#94a3b8"
+                />
               </View>
 
               <View style={styles.formGroup}>
                 <Text style={styles.label}>{t('maintenanceManagement.maintenancePeriod')}</Text>
-                <Pressable style={styles.selectInput}>
-                  <Text style={styles.selectText}>{t('maintenanceManagement.oneMonth')}</Text>
+                <Pressable 
+                  style={styles.selectInput}
+                  onPress={() => setShowPeriodDropdown(!showPeriodDropdown)}
+                >
+                  <Text style={styles.selectText}>{maintenancePeriod}</Text>
                   <ChevronDown size={16} color="#64748b" />
                 </Pressable>
+                {showPeriodDropdown && (
+                  <View style={styles.dropdown}>
+                    {maintenancePeriods.map((period) => (
+                      <Pressable
+                        key={period}
+                        style={styles.dropdownItem}
+                        onPress={() => {
+                          setMaintenancePeriod(period);
+                          setShowPeriodDropdown(false);
+                        }}
+                      >
+                        <Text style={[
+                          styles.dropdownItemText,
+                          maintenancePeriod === period && styles.dropdownItemTextActive
+                        ]}>
+                          {period}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
               </View>
 
               <View style={styles.formGroup}>
@@ -585,6 +649,33 @@ const styles = StyleSheet.create({
   selectText: {
     fontSize: 14,
     color: '#020617',
+  },
+  dropdown: {
+    marginTop: 4,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    maxHeight: 200,
+  },
+  dropdownItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  dropdownItemText: {
+    fontSize: 14,
+    color: '#475569',
+  },
+  dropdownItemTextActive: {
+    color: lightTheme.colors.primary,
+    fontWeight: '600',
   },
   modalFooter: {
     flexDirection: 'row',

@@ -4,7 +4,6 @@ import com.sitedefteri.dto.request.CreateApartmentRequest;
 import com.sitedefteri.dto.response.ApartmentResponse;
 import com.sitedefteri.entity.Apartment;
 import com.sitedefteri.entity.Block;
-import com.sitedefteri.entity.User;
 import com.sitedefteri.exception.ResourceNotFoundException;
 import com.sitedefteri.repository.ApartmentRepository;
 import com.sitedefteri.repository.BlockRepository;
@@ -14,7 +13,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,9 +31,17 @@ public class ApartmentService {
     
     @Transactional(readOnly = true)
     public List<ApartmentResponse> getApartmentsByBlock(String blockId) {
-        return apartmentRepository.findByBlockId(blockId).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        List<Apartment> apartments = apartmentRepository.findByBlockId(blockId);
+        List<Apartment> unique = dedupeByUnitNumberPreserveOrder(apartments);
+        return unique.stream().map(this::mapToResponse).collect(Collectors.toList());
+    }
+    
+    @Transactional(readOnly = true)
+    public List<ApartmentResponse> getApartmentsWithResidentsByBlock(String blockId) {
+        log.info("Fetching apartments with residents for block: {}", blockId);
+        List<Apartment> apartments = apartmentRepository.findByBlockId(blockId);
+        List<Apartment> unique = dedupeByUnitNumberPreserveOrder(apartments);
+        return unique.stream().map(this::mapToResponseWithResidents).collect(Collectors.toList());
     }
     
     @Transactional(readOnly = true)
@@ -40,10 +51,13 @@ public class ApartmentService {
         List<Block> blocks = blockRepository.findBySiteId(siteId);
         
         // Get all apartments for these blocks
-        return blocks.stream()
+        List<Apartment> apartments = blocks.stream()
                 .flatMap(block -> apartmentRepository.findByBlockId(block.getId()).stream())
-                .map(this::mapToResponse)
                 .collect(Collectors.toList());
+
+        // Site genelinde aynı (blockId + unitNumber) kombinasyonu tekrar ediyorsa tekilleştir.
+        List<Apartment> unique = dedupeByBlockAndUnitNumberPreserveOrder(apartments);
+        return unique.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
     
     @Transactional(readOnly = true)
@@ -64,7 +78,7 @@ public class ApartmentService {
     
     @Transactional
     public ApartmentResponse createApartment(String blockId, CreateApartmentRequest request) {
-        Block block = blockRepository.findById(blockId)
+        blockRepository.findById(blockId)
                 .orElseThrow(() -> new ResourceNotFoundException("Blok bulunamadı: " + blockId));
         
         Apartment apartment = new Apartment();
@@ -141,6 +155,8 @@ public class ApartmentService {
         if (apartment.getOwnerUserId() != null) {
             userRepository.findById(apartment.getOwnerUserId()).ifPresent(user -> {
                 response.setOwnerName(user.getFullName());
+                response.setOwnerEmail(user.getEmail());
+                response.setOwnerPhone(user.getPhone());
             });
         }
         
@@ -148,11 +164,142 @@ public class ApartmentService {
         if (apartment.getCurrentResidentId() != null) {
             userRepository.findById(apartment.getCurrentResidentId()).ifPresent(user -> {
                 response.setCurrentResidentName(user.getFullName());
+                response.setCurrentResidentEmail(user.getEmail());
+                response.setCurrentResidentPhone(user.getPhone());
             });
         }
         
         response.setCreatedAt(apartment.getCreatedAt());
         response.setUpdatedAt(apartment.getUpdatedAt());
         return response;
+    }
+    
+    private ApartmentResponse mapToResponseWithResidents(Apartment apartment) {
+        ApartmentResponse response = mapToResponse(apartment);
+        
+        // Calculate resident count based on owner and tenant
+        int residentCount = 0;
+        List<ApartmentResponse.ResidentInfo> residents = new ArrayList<>();
+        
+        if (apartment.getOwnerUserId() != null && !apartment.getOwnerUserId().isEmpty()) {
+            userRepository.findById(apartment.getOwnerUserId()).ifPresent(user -> {
+                response.setOwnerUserId(user.getId());
+                response.setOwnerName(user.getFullName());
+                response.setOwnerEmail(user.getEmail());
+                response.setOwnerPhone(user.getPhone());
+                
+                // Add owner to residents array
+                ApartmentResponse.ResidentInfo ownerInfo = new ApartmentResponse.ResidentInfo();
+                ownerInfo.setId(user.getId());
+                ownerInfo.setFullName(user.getFullName());
+                ownerInfo.setEmail(user.getEmail());
+                ownerInfo.setPhone(user.getPhone());
+                ownerInfo.setResidentType("owner");
+                residents.add(ownerInfo);
+            });
+            residentCount++;
+        }
+        
+        if (apartment.getCurrentResidentId() != null && !apartment.getCurrentResidentId().isEmpty()) {
+            // Only add tenant if different from owner
+            boolean isDifferentFromOwner = apartment.getOwnerUserId() == null || 
+                                          !apartment.getCurrentResidentId().equals(apartment.getOwnerUserId());
+            
+            if (isDifferentFromOwner) {
+                userRepository.findById(apartment.getCurrentResidentId()).ifPresent(user -> {
+                    response.setCurrentResidentId(user.getId());
+                    response.setCurrentResidentName(user.getFullName());
+                    response.setCurrentResidentEmail(user.getEmail());
+                    response.setCurrentResidentPhone(user.getPhone());
+                    
+                    // Add tenant to residents array
+                    ApartmentResponse.ResidentInfo tenantInfo = new ApartmentResponse.ResidentInfo();
+                    tenantInfo.setId(user.getId());
+                    tenantInfo.setFullName(user.getFullName());
+                    tenantInfo.setEmail(user.getEmail());
+                    tenantInfo.setPhone(user.getPhone());
+                    tenantInfo.setResidentType("tenant");
+                    residents.add(tenantInfo);
+                });
+                residentCount++;
+            }
+        }
+        
+        // Set resident count and residents array
+        response.setResidentCount(residentCount);
+        response.setResidents(residents);
+        
+        return response;
+    }
+
+    private List<Apartment> dedupeByUnitNumberPreserveOrder(List<Apartment> apartments) {
+        if (apartments == null || apartments.size() <= 1) return apartments;
+
+        Map<String, Apartment> byUnit = new LinkedHashMap<>();
+        int duplicates = 0;
+        for (Apartment apt : apartments) {
+            if (apt == null) continue;
+            String key = normalizeUnitNumber(apt.getUnitNumber());
+            // unitNumber boşsa düşürmeyelim
+            if (key.isEmpty()) {
+                byUnit.putIfAbsent("__empty__:" + Objects.toString(apt.getId(), ""), apt);
+                continue;
+            }
+            if (byUnit.containsKey(key)) {
+                duplicates++;
+                continue;
+            }
+            byUnit.put(key, apt);
+        }
+
+        if (duplicates > 0) {
+            log.warn("Duplicate apartments detected (blockId only): removed {} duplicates from {} rows", duplicates, apartments.size());
+        }
+        return new ArrayList<>(byUnit.values());
+    }
+
+    private List<Apartment> dedupeByBlockAndUnitNumberPreserveOrder(List<Apartment> apartments) {
+        if (apartments == null || apartments.size() <= 1) return apartments;
+
+        Map<String, Apartment> byKey = new LinkedHashMap<>();
+        int duplicates = 0;
+        for (Apartment apt : apartments) {
+            if (apt == null) continue;
+            String blockId = Objects.toString(apt.getBlockId(), "");
+            String unit = normalizeUnitNumber(apt.getUnitNumber());
+            String key = blockId + "::" + unit;
+            if (unit.isEmpty()) {
+                // unit boşsa id ile ayır
+                key = blockId + "::__empty__:" + Objects.toString(apt.getId(), "");
+            }
+            if (byKey.containsKey(key)) {
+                duplicates++;
+                continue;
+            }
+            byKey.put(key, apt);
+        }
+
+        if (duplicates > 0) {
+            log.warn("Duplicate apartments detected (blockId+unitNumber): removed {} duplicates from {} rows", duplicates, apartments.size());
+        }
+        return new ArrayList<>(byKey.values());
+    }
+
+    private String normalizeUnitNumber(String unitNumber) {
+        if (unitNumber == null) return "";
+        String raw = unitNumber.trim().toLowerCase();
+        if (raw.isEmpty()) return "";
+
+        // If numeric, normalize leading zeros (e.g., "01" -> "1")
+        if (raw.matches("^\\d+$")) {
+            try {
+                return String.valueOf(Integer.parseInt(raw));
+            } catch (NumberFormatException ignored) {
+                // fall back to raw
+            }
+        }
+
+        // Collapse multiple spaces for safety
+        return raw.replaceAll("\\s+", " ");
     }
 }

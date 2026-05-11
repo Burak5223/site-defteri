@@ -41,6 +41,14 @@ class ResidentService {
   async getResidentById(id: string): Promise<Resident> {
     return apiClient.get(`/users/${id}`);
   }
+  
+  async getApartmentsByBlock(blockId: string): Promise<any[]> {
+    return apiClient.get(`/blocks/${blockId}/apartments-with-residents`);
+  }
+  
+  async getResidentsByApartment(apartmentId: string): Promise<Resident[]> {
+    return apiClient.get(`/apartments/${apartmentId}/residents`);
+  }
 
   async inviteResident(data: InviteResidentRequest, siteId: string): Promise<void> {
     return apiClient.post('/users/invite', {
@@ -59,6 +67,13 @@ class ResidentService {
 
   async removeResidentFromApartment(userId: string, apartmentId: string): Promise<void> {
     return apiClient.delete(`/users/${userId}/apartments/${apartmentId}`);
+  }
+
+  async assignApartment(userId: string, apartmentId: string, assignmentType: 'owner' | 'tenant'): Promise<Resident> {
+    return apiClient.post(`/users/${userId}/assign-apartment`, {
+      apartmentId,
+      assignmentType,
+    });
   }
 
   async changeApartment(userId: string, apartmentId: string, assignmentType: 'owner' | 'tenant'): Promise<Resident> {

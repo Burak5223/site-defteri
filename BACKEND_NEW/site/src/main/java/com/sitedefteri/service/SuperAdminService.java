@@ -175,9 +175,15 @@ public class SuperAdminService {
                     siteInfo.put("address", site.getAddress());
                     siteInfo.put("subscriptionStatus", site.getSubscriptionStatus());
                     
-                    // Use simple default values for now
-                    siteInfo.put("totalApartments", 100);
-                    siteInfo.put("totalResidents", 250);
+                    // Calculate real statistics from user_site_memberships
+                    long totalApartments = apartmentRepository.countBySiteId(site.getId());
+                    long totalResidents = membershipRepository.countBySiteIdAndRoleTypeAndIsDeletedAndStatus(
+                        site.getId(), "sakin", false, "aktif");
+                    
+                    siteInfo.put("totalApartments", totalApartments);
+                    siteInfo.put("totalResidents", totalResidents);
+                    
+                    log.info("Site {}: {} apartments, {} residents", site.getName(), totalApartments, totalResidents);
                     
                     return siteInfo;
                 })

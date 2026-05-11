@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, RefreshControl, Pressable } from 'react-native';
 import { Shield, ClipboardList, CheckCircle, Package, Users, Bell, UserCircle, LogOut } from 'lucide-react-native';
 import { colors } from '../../theme';
 import { useAuth } from '../../context/AuthContext';
@@ -186,37 +186,49 @@ export function SecurityDashboard() {
 
       {/* Stats Grid */}
       <View style={styles.statsGrid}>
-        <View style={[styles.statCard, { backgroundColor: '#FFF4E6' }]}>
+        <Pressable 
+          style={[styles.statCard, { backgroundColor: '#FFF4E6' }]}
+          onPress={() => navigation.navigate('SecurityTasks')}
+        >
           <View style={[styles.statIcon, { backgroundColor: '#FFE4CC' }]}>
             <ClipboardList size={24} color="#FF9800" />
           </View>
           <Text style={styles.statValue}>{stats.todayTasks}</Text>
           <Text style={styles.statLabel}>{t('securityDashboard.todayTasks')}</Text>
-        </View>
+        </Pressable>
 
-        <View style={[styles.statCard, { backgroundColor: '#E8F5E9' }]}>
+        <Pressable 
+          style={[styles.statCard, { backgroundColor: '#E8F5E9' }]}
+          onPress={() => navigation.navigate('SecurityTasks')}
+        >
           <View style={[styles.statIcon, { backgroundColor: '#C8E6C9' }]}>
             <CheckCircle size={24} color={colors.success} />
           </View>
           <Text style={styles.statValue}>{stats.completedToday}</Text>
           <Text style={styles.statLabel}>{t('dashboard.completed')}</Text>
-        </View>
+        </Pressable>
 
-        <View style={[styles.statCard, { backgroundColor: '#E3F2FD' }]}>
+        <Pressable 
+          style={[styles.statCard, { backgroundColor: '#E3F2FD' }]}
+          onPress={() => navigation.navigate('SecurityTasks')}
+        >
           <View style={[styles.statIcon, { backgroundColor: '#BBDEFB' }]}>
             <ClipboardList size={24} color="#2196F3" />
           </View>
           <Text style={styles.statValue}>{stats.weekTasks}</Text>
           <Text style={styles.statLabel}>{t('securityDashboard.weekTasks')}</Text>
-        </View>
+        </Pressable>
 
-        <View style={[styles.statCard, { backgroundColor: '#F3E5F5' }]}>
+        <Pressable 
+          style={[styles.statCard, { backgroundColor: '#F3E5F5' }]}
+          onPress={() => navigation.navigate('SecurityPackages')}
+        >
           <View style={[styles.statIcon, { backgroundColor: '#E1BEE7' }]}>
             <Package size={24} color="#9C27B0" />
           </View>
           <Text style={styles.statValue}>{stats.pendingPackages}</Text>
           <Text style={styles.statLabel}>{t('securityDashboard.pendingPackages')}</Text>
-        </View>
+        </Pressable>
       </View>
 
       {/* Son Duyurular */}
@@ -235,7 +247,11 @@ export function SecurityDashboard() {
           </View>
         ) : (
           recentAnnouncements.map((announcement) => (
-            <View key={announcement.id} style={styles.announcementCard}>
+            <Pressable 
+              key={announcement.id} 
+              style={styles.announcementCard}
+              onPress={() => navigation.navigate('ResidentAnnouncements')}
+            >
               <View style={styles.announcementIcon}>
                 <Bell size={20} color={
                   announcement.priority === 'high' ? '#ef4444' :
@@ -258,7 +274,7 @@ export function SecurityDashboard() {
                   {new Date(announcement.createdAt).toLocaleDateString('tr-TR')}
                 </Text>
               </View>
-            </View>
+            </Pressable>
           ))
         )}
       </View>
@@ -279,7 +295,11 @@ export function SecurityDashboard() {
           </View>
         ) : (
           todayTasks.map((task) => (
-            <View key={task.id} style={styles.taskCard}>
+            <Pressable 
+              key={task.id} 
+              style={styles.taskCard}
+              onPress={() => navigation.navigate('SecurityTasks')}
+            >
               <View style={[styles.taskIcon, { 
                 backgroundColor: task.status === 'completed' ? '#E8F5E9' : 
                                task.status === 'in_progress' ? '#E3F2FD' : '#FFF4E6'
@@ -310,7 +330,7 @@ export function SecurityDashboard() {
                    task.status === 'in_progress' ? t('dashboard.inProgress') : t('dashboard.waiting')}
                 </Text>
               </View>
-            </View>
+            </Pressable>
           ))
         )}
       </View>

@@ -89,9 +89,39 @@ public class BlockService {
         response.setDescription(block.getDescription());
         response.setTotalFloors(block.getTotalFloors());
         
-        // Count apartments in this block
-        long apartmentCount = apartmentRepository.findByBlockId(block.getId()).size();
-        response.setTotalApartments((int) apartmentCount);
+        // Get all apartments in this block (excluding deleted ones)
+        var apartments = apartmentRepository.findByBlockId(block.getId());
+        response.setTotalApartments(apartments.size());
+        
+        log.debug("Block {} has {} apartments", block.getName(), apartments.size());
+        
+        // Count owners and tenants correctly
+        int ownerCount = 0;
+        int tenantCount = 0;
+        int totalResidents = 0;
+        
+        for (var apt : apartments) {
+            boolean hasOwner = apt.getOwnerUserId() != null && !apt.getOwnerUserId().isEmpty();
+            boolean hasCurrentResident = apt.getCurrentResidentId() != null && !apt.getCurrentResidentId().isEmpty();
+            
+            if (hasOwner) {
+                ownerCount++;
+                totalResidents++; // Owner is always a resident
+            }
+            
+            // Tenant is only counted if current resident is different from owner
+            if (hasCurrentResident && (!hasOwner || !apt.getCurrentResidentId().equals(apt.getOwnerUserId()))) {
+                tenantCount++;
+                totalResidents++; // Tenant is an additional resident
+            }
+        }
+        
+        response.setTotalOwners(ownerCount);
+        response.setTotalTenants(tenantCount);
+        response.setTotalResidents(totalResidents);
+        
+        log.info("Block {} - Apartments: {}, Owners: {}, Tenants: {}, Total Residents: {}", 
+                 block.getName(), apartments.size(), ownerCount, tenantCount, totalResidents);
         
         response.setCreatedAt(block.getCreatedAt());
         response.setUpdatedAt(block.getUpdatedAt());

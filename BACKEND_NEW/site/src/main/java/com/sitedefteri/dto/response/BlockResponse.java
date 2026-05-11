@@ -11,6 +11,9 @@ public class BlockResponse {
     private String description;
     private Integer totalFloors;
     private Integer totalApartments;
+    private Integer totalOwners;
+    private Integer totalTenants;
+    private Integer totalResidents;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

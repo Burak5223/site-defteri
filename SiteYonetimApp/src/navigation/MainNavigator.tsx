@@ -11,13 +11,11 @@ import {
   Users,
   Building,
   ClipboardList,
-  Menu,
   Bell,
   Box,
   MoreHorizontal,
   LogOut,
   UserCircle,
-  Clock,
 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
@@ -65,9 +63,6 @@ import ResidentProfile from '../screens/profile/ResidentProfile';
 import SettingsScreen from '../screens/settings/SettingsScreen';
 import AdminSettings from '../screens/settings/AdminSettings';
 import ResidentSettings from '../screens/settings/ResidentSettings';
-import NotificationSettingsScreen from '../screens/settings/NotificationSettingsScreen';
-import AdminNotifications from '../screens/notifications/AdminNotifications';
-import ResidentNotifications from '../screens/notifications/ResidentNotifications';
 import SiteSettingsScreen from '../screens/settings/SiteSettingsScreen';
 import DuesScreen from '../screens/dues/DuesScreen';
 import AdminDues from '../screens/dues/AdminDues';
@@ -76,7 +71,6 @@ import DueAssignmentScreen from '../screens/dues/DueAssignmentScreen';
 import MonthDuesDetail from '../screens/dues/MonthDuesDetail';
 // import StaffShiftsScreen from '../screens/staff/StaffShiftsScreen'; // Vardiyalar ekranı devre dışı
 import MessagesScreen from '../screens/messages/MessagesScreen';
-import PackagesScreen from '../screens/packages/PackagesScreen';
 import AdminPackages from '../screens/packages/AdminPackages';
 import ResidentPackages from '../screens/packages/ResidentPackages';
 import AdminAnnouncements from '../screens/announcements/AdminAnnouncements';
@@ -124,7 +118,7 @@ const DashboardStack = () => {
       <Stack.Screen name="Voting" component={VotingScreen} options={{ headerShown: true, title: t('nav.voting') }} />
       <Stack.Screen name="AdminVoting" component={AdminVoting} options={{ headerShown: true, title: t('nav.eVoting') }} />
       <Stack.Screen name="ResidentVoting" component={ResidentVoting} options={{ headerShown: true, title: t('nav.eVoting') }} />
-      <Stack.Screen name="Residents" component={ResidentsScreen} options={{ headerShown: true, title: t('nav.residents') }} />
+      <Stack.Screen name="Residents" component={AdminResidents} options={{ headerShown: true, title: t('nav.residents') }} />
       <Stack.Screen name="AdminResidents" component={AdminResidents} options={{ headerShown: true, title: t('nav.residents') }} />
       <Stack.Screen name="Sites" component={SitesScreen} options={{ headerShown: true, title: t('nav.sites') }} />
       <Stack.Screen name="AdminSites" component={AdminSites} options={{ headerShown: true, title: t('nav.sites') }} />
@@ -136,9 +130,6 @@ const DashboardStack = () => {
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: true, title: t('nav.settings') }} />
       <Stack.Screen name="AdminSettings" component={AdminSettings} options={{ headerShown: true, title: t('nav.settings') }} />
       <Stack.Screen name="ResidentSettings" component={ResidentSettings} options={{ headerShown: true, title: t('nav.settings') }} />
-      <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ headerShown: true, title: t('nav.notificationSettings') }} />
-      <Stack.Screen name="AdminNotifications" component={AdminNotifications} options={{ headerShown: true, title: t('nav.notifications') }} />
-      <Stack.Screen name="ResidentNotifications" component={ResidentNotifications} options={{ headerShown: true, title: t('nav.notifications') }} />
       <Stack.Screen name="SiteSettings" component={SiteSettingsScreen} options={{ headerShown: true, title: t('nav.siteSettings') }} />
       <Stack.Screen name="Announcements" component={AdminAnnouncements} options={{ headerShown: true, title: t('nav.announcements') }} />
       <Stack.Screen name="ResidentAnnouncements" component={ResidentAnnouncements} options={{ headerShown: true, title: t('nav.announcements') }} />
@@ -164,9 +155,8 @@ const DashboardStack = () => {
 
 const MoreMenuScreen = () => {
     const navigation = useNavigation<any>();
-    const { signOut, hasRole, user, isImpersonating } = useAuth();
+    const { signOut, hasRole, isImpersonating } = useAuth();
     const { t } = useI18n();
-    const { unreadAnnouncementsCount } = useNotifications();
     
     
     
@@ -191,11 +181,11 @@ const MoreMenuScreen = () => {
       if (isResident) {
         // Sakin için basit menü
         return [
-          { label: t('nav.notifications'), icon: Bell, screen: 'ResidentNotifications', roles: ['ROLE_RESIDENT'] },
           { label: t('nav.myDues'), icon: Wallet, screen: 'ResidentDues', roles: ['ROLE_RESIDENT'] },
           { label: t('nav.finance'), icon: Wallet, screen: 'ResidentFinance', roles: ['ROLE_RESIDENT'] },
           { label: t('nav.myPackages'), icon: Box, screen: 'ResidentPackages', roles: ['ROLE_RESIDENT'] },
           { label: t('nav.ticketReports'), icon: Wrench, screen: 'ResidentTickets', roles: ['ROLE_RESIDENT'] },
+          { label: t('nav.maintenanceManagement'), icon: Wrench, screen: 'Maintenance', roles: ['ROLE_RESIDENT'] },
           { label: t('nav.announcements'), icon: Bell, screen: 'ResidentAnnouncements', roles: ['ROLE_RESIDENT'] },
           { label: 'Ziyaretçi Talepleri', icon: Users, screen: 'ResidentVisitorRequests', roles: ['ROLE_RESIDENT'] },
           { label: t('nav.eVoting'), icon: ClipboardList, screen: 'ResidentVoting', roles: ['ROLE_RESIDENT'] },
@@ -240,7 +230,6 @@ const MoreMenuScreen = () => {
           { label: t('nav.packageTracking'), icon: Box, screen: 'Packages', roles: ['ROLE_ADMIN'] },
           { label: t('nav.residents'), icon: Users, screen: 'Residents', roles: ['ROLE_ADMIN'] },
           { label: t('nav.finance'), icon: Wallet, screen: 'AdminFinance', roles: ['ROLE_ADMIN'] },
-          { label: t('nav.notifications'), icon: Bell, screen: 'AdminNotifications', roles: ['ROLE_ADMIN'] },
           { label: t('nav.maintenanceManagement'), icon: Wrench, screen: 'Maintenance', roles: ['ROLE_ADMIN'] },
           { label: t('nav.announcements'), icon: Bell, screen: 'Announcements', roles: ['ROLE_ADMIN'] },
           { label: t('nav.eVoting'), icon: ClipboardList, screen: 'AdminVoting', roles: ['ROLE_ADMIN'] },
@@ -292,9 +281,6 @@ const MoreMenuScreen = () => {
                 {/* Menü Sayfaları */}
                 <View style={{ marginBottom: 15 }}>
                     {menuItems.map((item, index) => {
-                        const isAnnouncementItem = item.screen === 'ResidentAnnouncements' || item.screen === 'Announcements';
-                        const showBadge = isAnnouncementItem && unreadAnnouncementsCount > 0;
-                        
                         return (
                             <TouchableOpacity 
                                 key={index}
@@ -319,24 +305,6 @@ const MoreMenuScreen = () => {
                             >
                                 <View style={{ position: 'relative', marginRight: 12 }}>
                                     <item.icon size={18} color="#4b5563" />
-                                    {showBadge && (
-                                        <View style={{ 
-                                            position: 'absolute', 
-                                            right: -6, 
-                                            top: -3, 
-                                            backgroundColor: '#ef4444', 
-                                            borderRadius: 8, 
-                                            minWidth: 14, 
-                                            height: 14, 
-                                            justifyContent: 'center', 
-                                            alignItems: 'center',
-                                            paddingHorizontal: 2,
-                                        }}>
-                                            <Text style={{ color: '#fff', fontSize: 8, fontWeight: 'bold' }}>
-                                                {unreadAnnouncementsCount > 9 ? '9+' : unreadAnnouncementsCount}
-                                            </Text>
-                                        </View>
-                                    )}
                                 </View>
                                 <Text style={{ fontSize: 14, color: '#1f2937', fontWeight: '500' }}>
                                     {item.label}
@@ -381,16 +349,13 @@ const MoreMenuScreen = () => {
 
 
 const MainNavigator = () => {
-  const { hasRole, isImpersonating, user } = useAuth();
+  const { hasRole, isImpersonating } = useAuth();
   const { t } = useI18n();
-  const { unreadAnnouncementsCount, unreadMessagesCount } = useNotifications();
+  const { unreadMessagesCount } = useNotifications();
   
   // Rol kontrolü
   const isResident = hasRole('ROLE_RESIDENT') && !isImpersonating;
   const isAdmin = hasRole('ROLE_ADMIN') || isImpersonating;
-  const isSuperAdmin = hasRole('ROLE_SUPER_ADMIN') && !isImpersonating;
-  const isSecurity = hasRole('ROLE_SECURITY');
-  const isCleaning = hasRole('ROLE_CLEANING');
   
   // Aidatlar tab'ı sadece Admin ve Sakin için görünür
   const showDuesTab = isAdmin || isResident;

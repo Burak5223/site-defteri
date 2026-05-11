@@ -29,6 +29,18 @@ public class TicketService {
     }
     
     public List<TicketResponse> getMyTickets(String userId) {
+        // Get user's apartment
+        String apartmentId = getUserApartmentId(userId);
+        
+        if (apartmentId != null) {
+            // Return all tickets for this apartment (including those created by admin)
+            return ticketRepository.findByApartmentIdOrderByCreatedAtDesc(apartmentId)
+                    .stream()
+                    .map(this::toResponse)
+                    .collect(Collectors.toList());
+        }
+        
+        // Fallback: return only user's own tickets
         return ticketRepository.findByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
                 .map(this::toResponse)
@@ -43,8 +55,18 @@ public class TicketService {
         ticket.setTitle(request.getTitle());
         ticket.setDescription(request.getDescription());
         ticket.setCategory(request.getCategory());
-        ticket.setApartmentId(request.getApartmentId());
         ticket.setCreatedBy(userId);
+        
+        // Set apartment ID - if not provided, try to get from user's residency
+        String apartmentId = request.getApartmentId();
+        if (apartmentId == null || apartmentId.isEmpty()) {
+            // Try to get user's apartment from residency_history
+            apartmentId = getUserApartmentId(userId);
+            if (apartmentId != null) {
+                log.info("Auto-assigned apartment {} to ticket for user {}", apartmentId, userId);
+            }
+        }
+        ticket.setApartmentId(apartmentId);
         
         if (request.getPriority() != null) {
             ticket.setPriority(mapPriority(request.getPriority()));
@@ -52,6 +74,22 @@ public class TicketService {
         
         Ticket saved = ticketRepository.save(ticket);
         return toResponse(saved);
+    }
+    
+    /**
+     * Helper: Get user's apartment ID from residency_history
+     */
+    private String getUserApartmentId(String userId) {
+        try {
+            // Query residency_history to find active apartment
+            var result = ticketRepository.findApartmentByUserId(userId);
+            if (!result.isEmpty()) {
+                return result.get(0);
+            }
+        } catch (Exception e) {
+            log.warn("Could not find apartment for user {}: {}", userId, e.getMessage());
+        }
+        return null;
     }
     
     private Ticket.Priority mapPriority(String priority) {

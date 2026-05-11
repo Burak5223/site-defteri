@@ -31,9 +31,11 @@ import { paymentService } from '../../services/payment.service';
 import { currencyService, CurrencyRate } from '../../services/currency.service';
 import { formatAmount, formatPaymentDate, getPaymentMethodName, getPaymentStatusName } from '../../utils/paymentHelpers';
 import { useI18n } from '../../context/I18nContext';
+import { useAuth } from '../../context/AuthContext';
 
 const ResidentDues = () => {
   const { t } = useI18n();
+  const { user } = useAuth();
   const [selectedDue, setSelectedDue] = useState<any>(null);
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [dues, setDues] = useState<Due[]>([]);
@@ -620,6 +622,21 @@ const ResidentDues = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
         }
       >
+        {/* Owner exemption notice */}
+        {user?.residentType === 'owner' && (
+          <View style={styles.ownerExemptionCard}>
+            <View style={styles.ownerExemptionIcon}>
+              <Building2 size={20} color={colors.warning} />
+            </View>
+            <View style={styles.ownerExemptionContent}>
+              <Text style={styles.ownerExemptionTitle}>Kat Maliki Muafiyeti</Text>
+              <Text style={styles.ownerExemptionSubtitle}>
+                Kat malikleri aidat ödemekle yükümlü değildir. Sadece kiracılar aidat öder.
+              </Text>
+            </View>
+          </View>
+        )}
+
         <View style={styles.summaryGrid}>
           <View style={[styles.summaryCard, { backgroundColor: 'rgba(239,68,68,0.1)' }]}>
             <View style={[styles.summaryIcon, { backgroundColor: colors.white }]}>
@@ -703,13 +720,22 @@ const ResidentDues = () => {
                   </View>
                 </View>
 
-                {due.status !== 'paid' && (
+                {/* Payment restrictions for owners */}
+                {due.status !== 'paid' && user?.residentType !== 'owner' && (
                   <Pressable 
                     style={styles.payButton}
                     onPress={() => handlePayDue(due)}
                   >
                     <Text style={styles.payButtonText}>Öde</Text>
                   </Pressable>
+                )}
+
+                {due.status !== 'paid' && user?.residentType === 'owner' && (
+                  <View style={styles.ownerRestrictionInfo}>
+                    <Text style={styles.ownerRestrictionText}>
+                      Kat malikleri aidat ödemez
+                    </Text>
+                  </View>
                 )}
 
                 {due.status === 'paid' && (
@@ -1267,6 +1293,54 @@ const styles = StyleSheet.create({
   transferInfoValue: { fontSize: fontSize.cardSubtitle, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   transferModalButton: { backgroundColor: colors.primary, paddingVertical: spacing.lg, borderRadius: borderRadius.button, alignItems: 'center' },
   transferModalButtonText: { fontSize: fontSize.buttonText, fontWeight: fontWeight.semibold, color: colors.white },
+  
+  // Owner exemption styles
+  ownerExemptionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef3c7',
+    borderRadius: borderRadius.card,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.warning,
+  },
+  ownerExemptionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.icon,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  ownerExemptionContent: {
+    flex: 1,
+  },
+  ownerExemptionTitle: {
+    fontSize: fontSize.cardTitle,
+    fontWeight: fontWeight.semibold,
+    color: '#92400e',
+    marginBottom: 2,
+  },
+  ownerExemptionSubtitle: {
+    fontSize: fontSize.cardSubtitle,
+    color: '#78350f',
+  },
+  ownerRestrictionInfo: {
+    backgroundColor: '#fef3c7',
+    padding: spacing.md,
+    borderRadius: borderRadius.button,
+    marginTop: spacing.sm,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.warning,
+  },
+  ownerRestrictionText: {
+    color: '#92400e',
+    fontSize: fontSize.cardSubtitle,
+    fontWeight: fontWeight.medium,
+    textAlign: 'center',
+  },
 });
 
 export default ResidentDues;

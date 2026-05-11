@@ -12,6 +12,7 @@ import java.util.List;
 public interface TicketRepository extends JpaRepository<Ticket, String> {
     List<Ticket> findBySiteIdOrderByCreatedAtDesc(String siteId);
     List<Ticket> findByUserIdOrderByCreatedAtDesc(String userId);
+    List<Ticket> findByApartmentIdOrderByCreatedAtDesc(String apartmentId);
     
     // Performance calculation methods
     long countByStatusIn(List<String> statuses);
@@ -21,4 +22,8 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
     
     @Query("SELECT COUNT(t) FROM Ticket t WHERE t.siteId = :siteId AND t.status IN :statuses")
     long countBySiteIdAndStatusIn(@Param("siteId") String siteId, @Param("statuses") List<String> statuses);
+    
+    // Get user's apartment from residency_history
+    @Query(value = "SELECT apartment_id FROM residency_history WHERE user_id = :userId AND status = 'active' LIMIT 1", nativeQuery = true)
+    List<String> findApartmentByUserId(@Param("userId") String userId);
 }

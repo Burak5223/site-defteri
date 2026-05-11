@@ -6,6 +6,7 @@ import {
   ScrollView,
   Pressable,
   Modal,
+  Alert,
 } from 'react-native';
 import {
   Mail,
@@ -14,7 +15,7 @@ import {
   Home,
   LogOut,
   ChevronRight,
-  Bell,
+
   Shield,
   HelpCircle,
   Globe,
@@ -32,12 +33,15 @@ import EditProfileModal from '../../components/modals/EditProfileModal';
 import ChangePasswordModal from '../../components/modals/ChangePasswordModal';
 import { useAuth } from '../../context/AuthContext';
 
+
 const ResidentProfile = () => {
-  const { user } = useAuth();
+  const { user, signOut, switchApartment: switchApartmentContext } = useAuth();
   const { t, language, changeLanguage } = useI18n();
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [editProfileModalVisible, setEditProfileModalVisible] = useState(false);
   const [changePasswordModalVisible, setChangePasswordModalVisible] = useState(false);
+  const [apartmentSwitchModalVisible, setApartmentSwitchModalVisible] = useState(false);
+  const [userApartments, setUserApartments] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState({
     fullName: user?.fullName || 'Ahmet Yılmaz',
     email: user?.email || 'ahmet.yilmaz@example.com',
@@ -47,6 +51,7 @@ const ResidentProfile = () => {
   useFocusEffect(
     useCallback(() => {
       loadUserProfile();
+      loadUserApartments();
     }, [])
   );
 
@@ -60,6 +65,35 @@ const ResidentProfile = () => {
       });
     } catch (error) {
       console.error('Failed to load user profile:', error);
+    }
+  };
+
+  const loadUserApartments = async () => {
+    try {
+      const apartments = await apiClient.get<any[]>('/users/me/apartments');
+      setUserApartments(apartments || []);
+    } catch (error) {
+      console.error('Failed to load user apartments:', error);
+      setUserApartments([]);
+    }
+  };
+
+  const handleSwitchApartment = async (apartment: any) => {
+    try {
+      await apiClient.post('/users/me/switch-apartment', { apartmentId: apartment.id });
+      
+      // Update AuthContext with new apartment info
+      await switchApartmentContext(apartment.id, apartment.blockName, apartment.unitNumber);
+      
+      Alert.alert('Başarılı', `${apartment.blockName} - ${apartment.unitNumber} dairesine geçiş yapıldı`);
+      setApartmentSwitchModalVisible(false);
+      
+      // Reload user data
+      loadUserProfile();
+      loadUserApartments();
+    } catch (error) {
+      console.error('Failed to switch apartment:', error);
+      Alert.alert('Hata', 'Daire değiştirilemedi');
     }
   };
   
@@ -165,13 +199,24 @@ const ResidentProfile = () => {
             <ChevronRight size={16} color={colors.gray400} />
           </Pressable>
 
-          <Pressable style={styles.menuItem}>
-            <View style={styles.menuLeft}>
-              <Bell size={18} color={colors.textSecondary} style={styles.menuIcon} />
-              <Text style={styles.menuLabel}>{t('profile.notifications')}</Text>
-            </View>
-            <ChevronRight size={16} color={colors.gray400} />
-          </Pressable>
+          {/* Dairelerim - Show only if user has multiple apartments */}
+          {userApartments.length > 1 && (
+            <Pressable 
+              style={styles.menuItem}
+              onPress={() => setApartmentSwitchModalVisible(true)}
+            >
+              <View style={styles.menuLeft}>
+                <Home size={18} color={colors.textSecondary} style={styles.menuIcon} />
+                <Text style={styles.menuLabel}>Dairelerim</Text>
+              </View>
+              <View style={styles.menuRight}>
+                <View style={styles.apartmentBadge}>
+                  <Text style={styles.apartmentBadgeText}>{userApartments.length}</Text>
+                </View>
+                <ChevronRight size={16} color={colors.gray400} />
+              </View>
+            </Pressable>
+          )}
 
           <Pressable 
             style={styles.menuItem}
@@ -189,7 +234,7 @@ const ResidentProfile = () => {
             </View>
           </Pressable>
 
-          <Pressable style={styles.menuItem}>
+          <Pressable style={styles.menuItem} onPress={() => Alert.alert('Gizlilik', 'Gizlilik ayarları yakında eklenecek')}>
             <View style={styles.menuLeft}>
               <Shield size={18} color={colors.textSecondary} style={styles.menuIcon} />
               <Text style={styles.menuLabel}>{t('profile.privacy')}</Text>
@@ -197,7 +242,7 @@ const ResidentProfile = () => {
             <ChevronRight size={16} color={colors.gray400} />
           </Pressable>
 
-          <Pressable style={styles.menuItem}>
+          <Pressable style={styles.menuItem} onPress={() => Alert.alert('Yardım', 'Yardım sayfası yakında eklenecek')}>
             <View style={styles.menuLeft}>
               <HelpCircle size={18} color={colors.textSecondary} style={styles.menuIcon} />
               <Text style={styles.menuLabel}>{t('profile.help')}</Text>
@@ -206,7 +251,16 @@ const ResidentProfile = () => {
           </Pressable>
         </View>
 
-        <Pressable style={styles.logoutButton}>
+        <Pressable style={styles.logoutButton} onPress={() => {
+          Alert.alert(
+            'Çıkış Yap',
+            'Uygulamadan çıkış yapmak istediğinize emin misiniz?',
+            [
+              { text: 'İptal', style: 'cancel' },
+              { text: 'Çıkış Yap', style: 'destructive', onPress: () => signOut() }
+            ]
+          );
+        }}>
           <LogOut size={18} color="#b91c1c" style={{ marginRight: 8 }} />
           <Text style={styles.logoutText}>{t('profile.logout')}</Text>
         </Pressable>
@@ -271,6 +325,68 @@ const ResidentProfile = () => {
         visible={changePasswordModalVisible}
         onClose={() => setChangePasswordModalVisible(false)}
       />
+
+      {/* Apartment Switch Modal */}
+      <Modal
+        visible={apartmentSwitchModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setApartmentSwitchModalVisible(false)}
+      >
+        <Pressable 
+          style={styles.modalOverlay}
+          onPress={() => setApartmentSwitchModalVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Dairelerim</Text>
+              <Pressable 
+                onPress={() => setApartmentSwitchModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <X size={20} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+
+            <View style={styles.apartmentList}>
+              {userApartments.map((apartment) => {
+                const isCurrentApartment = apartment.id === user?.apartmentId;
+                return (
+                  <Pressable
+                    key={apartment.id}
+                    style={[
+                      styles.apartmentItem,
+                      isCurrentApartment && styles.apartmentItemActive,
+                    ]}
+                    onPress={() => !isCurrentApartment && handleSwitchApartment(apartment)}
+                    disabled={isCurrentApartment}
+                  >
+                    <View style={styles.apartmentLeft}>
+                      <Home size={20} color={isCurrentApartment ? colors.primary : colors.textSecondary} />
+                      <View style={styles.apartmentInfo}>
+                        <Text style={[
+                          styles.apartmentName,
+                          isCurrentApartment && styles.apartmentNameActive
+                        ]}>
+                          {apartment.blockName} - {apartment.unitNumber}
+                        </Text>
+                        <Text style={styles.apartmentRole}>
+                          {apartment.assignmentType === 'OWNER' ? 'Malik' : 'Kiracı'}
+                        </Text>
+                      </View>
+                    </View>
+                    {isCurrentApartment && (
+                      <View style={styles.currentBadge}>
+                        <Check size={16} color={colors.white} />
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 };
@@ -396,6 +512,71 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     color: colors.textPrimary,
+  },
+  
+  // Apartment badge
+  apartmentBadge: {
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    minWidth: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  apartmentBadgeText: {
+    fontSize: 12,
+    fontWeight: fontWeight.bold,
+    color: colors.white,
+  },
+  
+  // Apartment list
+  apartmentList: {
+    gap: 8,
+  },
+  apartmentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+  },
+  apartmentItemActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryLight,
+  },
+  apartmentLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  apartmentInfo: {
+    flex: 1,
+  },
+  apartmentName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  apartmentNameActive: {
+    color: colors.primary,
+  },
+  apartmentRole: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  currentBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

@@ -76,9 +76,30 @@ public class AuthService {
         
         // Get user's apartment ID from residency_history (for residents)
         String apartmentId = null;
+        String blockName = null;
+        String unitNumber = null;
         if ("ROLE_RESIDENT".equals(role)) {
             apartmentId = getUserApartmentId(user.getId());
             log.info("User apartment ID: {}", apartmentId);
+            
+            // Get apartment details (block name and unit number)
+            if (apartmentId != null) {
+                try {
+                    String query = "SELECT block_name, unit_number FROM apartments WHERE id = :apartmentId";
+                    var result = entityManager.createNativeQuery(query)
+                            .setParameter("apartmentId", apartmentId)
+                            .getSingleResult();
+                    
+                    if (result instanceof Object[]) {
+                        Object[] row = (Object[]) result;
+                        blockName = row[0] != null ? row[0].toString() : null;
+                        unitNumber = row[1] != null ? row[1].toString() : null;
+                        log.info("User apartment: {} {}", blockName, unitNumber);
+                    }
+                } catch (Exception e) {
+                    log.warn("Could not fetch apartment details for apartmentId {}: {}", apartmentId, e.getMessage());
+                }
+            }
         }
         
         UserResponse userResponse = new UserResponse();
@@ -89,6 +110,9 @@ public class AuthService {
         userResponse.setStatus(user.getStatus().name());
         userResponse.setSiteId(siteId); // Set siteId in user response
         userResponse.setApartmentId(apartmentId); // Set apartmentId for residents
+        userResponse.setBlockName(blockName); // Set block name
+        userResponse.setUnitNumber(unitNumber); // Set unit number
+        userResponse.setUserQrToken(user.getUserQrToken()); // Set QR token for package delivery
         
         List<String> roles = new ArrayList<>();
         roles.add(role);

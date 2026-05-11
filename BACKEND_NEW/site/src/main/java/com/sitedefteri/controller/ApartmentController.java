@@ -48,6 +48,16 @@ public class ApartmentController {
         return ResponseEntity.ok(apartmentService.getApartmentsByBlock(blockId));
     }
     
+    /**
+     * Get apartments with residents by block
+     * GET /api/blocks/{blockId}/apartments-with-residents
+     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'RESIDENT', 'SECURITY', 'CLEANING')")
+    @GetMapping("/blocks/{blockId}/apartments-with-residents")
+    public ResponseEntity<List<ApartmentResponse>> getApartmentsWithResidents(@PathVariable String blockId) {
+        return ResponseEntity.ok(apartmentService.getApartmentsWithResidentsByBlock(blockId));
+    }
+    
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'RESIDENT', 'SECURITY', 'CLEANING')")
     @GetMapping("/blocks/{blockId}/apartments/{id}")
     public ResponseEntity<ApartmentResponse> getApartment(

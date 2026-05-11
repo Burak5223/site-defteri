@@ -244,21 +244,32 @@ const VotingScreen = () => {
                                         })}
                                     </View>
 
+                                    {/* Voting restrictions for tenants */}
                                     {topic.status === 'active' && !topic.hasVoted && (
-                                        <TouchableOpacity
+                                      <>
+                                        {user?.residentType === 'tenant' ? (
+                                          <View style={styles.restrictionInfo}>
+                                            <Text style={styles.restrictionText}>
+                                              Kiracılar oy kullanamaz. Sadece kat malikleri oylamaya katılabilir.
+                                            </Text>
+                                          </View>
+                                        ) : (
+                                          <TouchableOpacity
                                             style={[styles.voteButton, !selectedOption && styles.voteButtonDisabled]}
                                             disabled={!selectedOption || votingInProgress}
                                             onPress={() => selectedOption && handleVote(topic.id, selectedOption)}
-                                        >
+                                          >
                                             {votingInProgress ? (
-                                                <ActivityIndicator size="small" color="#fff" />
+                                              <ActivityIndicator size="small" color="#fff" />
                                             ) : (
-                                                <>
-                                                    <CheckCircle2 size={18} color="#ffffff" style={{ marginRight: 6 }} />
-                                                    <Text style={styles.voteButtonText}>{t('votingScreen.vote')}</Text>
-                                                </>
+                                              <>
+                                                <CheckCircle2 size={18} color="#ffffff" style={{ marginRight: 6 }} />
+                                                <Text style={styles.voteButtonText}>{t('votingScreen.vote')}</Text>
+                                              </>
                                             )}
-                                        </TouchableOpacity>
+                                          </TouchableOpacity>
+                                        )}
+                                      </>
                                     )}
 
                                     {topic.hasVoted && (
@@ -610,6 +621,20 @@ const styles = StyleSheet.create({
         marginLeft: 6,
         color: theme.colors.primary,
         fontWeight: '500',
+    },
+    restrictionInfo: {
+        backgroundColor: '#fef3c7',
+        padding: 16,
+        borderRadius: 12,
+        marginTop: 16,
+        borderLeftWidth: 4,
+        borderLeftColor: '#f59e0b',
+    },
+    restrictionText: {
+        color: '#92400e',
+        fontSize: 14,
+        fontWeight: '500',
+        textAlign: 'center',
     },
     saveButton: {
         backgroundColor: theme.colors.primary,

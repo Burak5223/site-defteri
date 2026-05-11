@@ -70,8 +70,10 @@ public class PaymentService {
         payment.setNotes(request.getNotes());
         
         // Ödeme yöntemine göre durum belirleme
-        if ("card".equals(request.getPaymentMethod()) || "virtual".equals(request.getPaymentMethod())) {
-            // Kart ve Sanal POS ödemeleri demo olduğu için direkt onaylı
+        // DEMO ORTAMI: Tüm ödeme yöntemleri direkt onaylı
+        if ("card".equals(request.getPaymentMethod()) || "virtual".equals(request.getPaymentMethod()) ||
+            "transfer".equals(request.getPaymentMethod()) || "cash".equals(request.getPaymentMethod())) {
+            // Demo ortamında tüm ödemeler direkt onaylı
             payment.setStatus("tamamlandi");
             payment.setPaymentDate(LocalDateTime.now());
             payment.setReceiptNumber(generateReceiptNumber());
@@ -83,9 +85,6 @@ public class PaymentService {
             // Gelir kaydı oluştur
             createIncomeRecord(payment, due);
             
-        } else if ("transfer".equals(request.getPaymentMethod()) || "cash".equals(request.getPaymentMethod())) {
-            // Havale/EFT ve Nakit ödemeler yönetici onayı bekler
-            payment.setStatus("bekliyor");
         } else {
             throw new BadRequestException("Geçersiz ödeme yöntemi: " + request.getPaymentMethod());
         }

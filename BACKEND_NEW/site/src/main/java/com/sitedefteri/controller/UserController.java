@@ -6,6 +6,8 @@ import com.sitedefteri.dto.request.UpdateUserRequest;
 import com.sitedefteri.dto.response.UserResponse;
 import com.sitedefteri.security.JwtTokenProvider;
 import com.sitedefteri.service.UserService;
+import com.sitedefteri.service.DashboardService;
+import com.sitedefteri.service.DueService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,8 @@ public class UserController {
     
     private final UserService userService;
     private final JwtTokenProvider jwtTokenProvider;
+    private final DashboardService dashboardService;
+    private final DueService dueService;
     
     /**
      * Get all users for a site
@@ -34,12 +38,36 @@ public class UserController {
     }
     
     /**
+     * Get residents by apartment
+     * GET /api/apartments/{apartmentId}/residents
+     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'SECURITY', 'CLEANING', 'RESIDENT')")
+    @GetMapping("/apartments/{apartmentId}/residents")
+    public ResponseEntity<List<UserResponse>> getApartmentResidents(@PathVariable String apartmentId) {
+        return ResponseEntity.ok(userService.getUsersByApartment(apartmentId));
+    }
+    
+    /**
      * Get user by ID
      * GET /api/users/{userId}
      */
     @GetMapping("/users/{userId}")
     public ResponseEntity<UserResponse> getUser(@PathVariable String userId) {
         return ResponseEntity.ok(userService.getUserById(userId));
+    }
+    
+    /**
+     * Create new resident with full profile
+     * POST /api/users/create-resident
+     */
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/users/create-resident")
+    public ResponseEntity<UserResponse> createResident(
+            @Valid @RequestBody com.sitedefteri.dto.request.CreateResidentRequest request,
+            HttpServletRequest httpRequest) {
+        String token = jwtTokenProvider.getTokenFromRequest(httpRequest);
+        String createdBy = jwtTokenProvider.getUserIdFromToken(token);
+        return ResponseEntity.ok(userService.createResident(request, createdBy));
     }
     
     /**
@@ -298,5 +326,113 @@ public class UserController {
                 "message", e.getMessage()
             ));
         }
+    }
+    
+    /**
+     * Get current user's apartments
+     * GET /api/users/me/apartments
+     */
+    @GetMapping("/users/me/apartments")
+    public ResponseEntity<List<java.util.Map<String, Object>>> getMyApartments(HttpServletRequest httpRequest) {
+        String token = jwtTokenProvider.getTokenFromRequest(httpRequest);
+        String userId = jwtTokenProvider.getUserIdFromToken(token);
+        return ResponseEntity.ok(userService.getUserApartments(userId));
+    }
+    
+    /**
+     * Get resident dashboard statistics
+     * GET /api/users/{userId}/dashboard
+     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'SECURITY', 'CLEANING', 'RESIDENT')")
+    @GetMapping("/users/{userId}/dashboard")
+    public ResponseEntity<com.sitedefteri.dto.response.DashboardStatsResponse> getResidentDashboard(
+            @PathVariable String userId,
+            HttpServletRequest httpRequest) {
+        
+        // Verify user can access this dashboard (either own dashboard or admin)
+        String token = jwtTokenProvider.getTokenFromRequest(httpRequest);
+        String currentUserId = jwtTokenProvider.getUserIdFromToken(token);
+        
+        // Allow access if it's the user's own dashboard or if user is admin
+        if (!userId.equals(currentUserId)) {
+            // Check if current user is admin
+            var currentUser = userService.getUserById(currentUserId);
+            if (currentUser.getEmail() == null || !currentUser.getEmail().contains("admin")) {
+                return ResponseEntity.status(403).build();
+            }
+        }
+        
+        return ResponseEntity.ok(dashboardService.getResidentDashboard(userId));
+    }
+    
+    /**
+     * Get current user's dashboard statistics
+     * GET /api/users/me/dashboard
+     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'SECURITY', 'CLEANING', 'RESIDENT')")
+    @GetMapping("/users/me/dashboard")
+    public ResponseEntity<com.sitedefteri.dto.response.DashboardStatsResponse> getMyDashboard(HttpServletRequest httpRequest) {
+        String token = jwtTokenProvider.getTokenFromRequest(httpRequest);
+        String userId = jwtTokenProvider.getUserIdFromToken(token);
+        return ResponseEntity.ok(dashboardService.getResidentDashboard(userId));
+    }
+    
+    /**
+     * Get user's dues
+     * GET /api/users/{userId}/dues
+     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'SECURITY', 'CLEANING', 'RESIDENT')")
+    @GetMapping("/users/{userId}/dues")
+    public ResponseEntity<List<com.sitedefteri.dto.response.DueResponse>> getUserDues(
+            @PathVariable String userId,
+            HttpServletRequest httpRequest) {
+        
+        // Verify user can access these dues (either own dues or admin)
+        String token = jwtTokenProvider.getTokenFromRequest(httpRequest);
+        String currentUserId = jwtTokenProvider.getUserIdFromToken(token);
+        
+        // Allow access if it's the user's own dues or if user is admin
+        if (!userId.equals(currentUserId)) {
+            // Check if current user is admin
+            var currentUser = userService.getUserById(currentUserId);
+            if (currentUser.getEmail() == null || !currentUser.getEmail().contains("admin")) {
+                return ResponseEntity.status(403).build();
+            }
+        }
+        
+        return ResponseEntity.ok(dueService.getDuesByUserId(userId));
+    }
+    
+    /**
+     * Get current user's dues
+     * GET /api/users/me/dues
+     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'SECURITY', 'CLEANING', 'RESIDENT')")
+    @GetMapping("/users/me/dues")
+    public ResponseEntity<List<com.sitedefteri.dto.response.DueResponse>> getMyDues(HttpServletRequest httpRequest) {
+        String token = jwtTokenProvider.getTokenFromRequest(httpRequest);
+        String userId = jwtTokenProvider.getUserIdFromToken(token);
+        return ResponseEntity.ok(dueService.getDuesByUserId(userId));
+    }
+    
+    /**
+     * Switch to another apartment
+     * POST /api/users/me/switch-apartment
+     * Body: { "apartmentId": "apartment-uuid" }
+     */
+    @PostMapping("/users/me/switch-apartment")
+    public ResponseEntity<UserResponse> switchApartment(
+            @RequestBody java.util.Map<String, String> request,
+            HttpServletRequest httpRequest) {
+        
+        String apartmentId = request.get("apartmentId");
+        if (apartmentId == null || apartmentId.isEmpty()) {
+            throw new IllegalArgumentException("apartmentId is required");
+        }
+        
+        String token = jwtTokenProvider.getTokenFromRequest(httpRequest);
+        String userId = jwtTokenProvider.getUserIdFromToken(token);
+        
+        return ResponseEntity.ok(userService.switchUserApartment(userId, apartmentId));
     }
 }

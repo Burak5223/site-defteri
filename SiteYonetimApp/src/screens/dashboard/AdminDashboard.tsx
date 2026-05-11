@@ -33,7 +33,64 @@ import { packageService } from '../../services/package.service';
 import { financeService } from '../../services/finance.service';
 import { announcementService } from '../../services/announcement.service';
 import { taskService } from '../../services/task.service';
+import { residentService } from '../../services/resident.service';
+import { siteService } from '../../services/site.service';
 import { useI18n } from '../../context/I18nContext';
+import { apiClient } from '../../api/apiClient';
+
+interface DashboardResponse {
+  // Genel İstatistikler
+  totalSites?: number;
+  totalManagers?: number;
+  totalResidents?: number;
+  totalApartments?: number;
+  averagePerformance?: number;
+  
+  // Finansal İstatistikler
+  monthlyIncome?: number;
+  monthlyExpense?: number;
+  totalBalance?: number;
+  incomeGrowth?: number;
+  
+  // Aidat İstatistikleri
+  totalDues?: number;
+  paidDues?: number;
+  unpaidDues?: number;
+  unpaidAmount?: number;
+  collectionRate?: number;
+  
+  // Arıza/Ticket İstatistikleri
+  totalTickets?: number;
+  openTickets?: number;
+  inProgressTickets?: number;
+  resolvedTickets?: number;
+  closedTickets?: number;
+  resolutionRate?: number;
+  
+  // Paket İstatistikleri
+  totalPackages?: number;
+  waitingPackages?: number;
+  deliveredPackages?: number;
+  deliveryRate?: number;
+  
+  // Mesaj İstatistikleri
+  totalMessages?: number;
+  unreadMessages?: number;
+  
+  // Duyuru İstatistikleri
+  totalAnnouncements?: number;
+  activeAnnouncements?: number;
+  
+  // Görev İstatistikleri
+  totalTasks?: number;
+  completedTasks?: number;
+  pendingTasks?: number;
+  
+  // Bakım İstatistikleri
+  totalMaintenanceEquipment?: number;
+  upcomingMaintenance?: number;
+  overdueMaintenance?: number;
+}
 
 function AdminDashboard() {
   const { t } = useI18n();
@@ -79,59 +136,48 @@ function AdminDashboard() {
     console.log('🔄 Dashboard: Loading data for siteId:', user.siteId);
 
     try {
-      // Admin için tüm site aidatlarını çek, sakin için sadece kendi aidatlarını çek
-      const [dues, tickets, packages, incomes, expenses, announcements, tasks] = await Promise.all([
-        dueService.getDues(user.siteId).catch(err => {
-          console.error('Dues API error:', err);
-          return [];
-        }), // Site ID'ye göre aidatlar
-        ticketService.getTickets(user.siteId).catch(() => []),
-        packageService.getPackages(user.siteId).catch(() => []),
+      // Use dashboard API endpoint for consistent data
+      const dashboardResponse: DashboardResponse = await apiClient.get(`/sites/${user.siteId}/dashboard`);
+
+      console.log('✅ Dashboard API Response:', dashboardResponse);
+
+      // Load financial data from finance service (same as AdminFinance page)
+      const [incomes, expenses, announcements, tasks] = await Promise.all([
         financeService.getIncomes(user.siteId).catch(() => []),
         financeService.getExpenses(user.siteId).catch(() => []),
         announcementService.getAnnouncements(user.siteId).catch(() => []),
         taskService.getTasks(user.siteId).catch(() => []),
       ]);
 
-      // Admin için bekleyen aidatlar - atadığı tüm aidatlardan ödenmeyen
-      const pendingDues = dues.filter(d => d.status === 'bekliyor' || d.status === 'pending');
-      const pendingDuesAmount = pendingDues.reduce((sum, d) => sum + (d.amount || 0), 0);
-
-      // Açık arızalar - Türkçe ve İngilizce status'leri destekle
-      const openTickets = tickets.filter(t => {
-        const status = t.status.toLowerCase();
-        return status === 'open' || 
-               status === 'in_progress' || 
-               status === 'acik' || 
-               status === 'devam_ediyor';
-      }).length;
-      console.log('📊 Dashboard Tickets:', { total: tickets.length, openTickets, tickets });
-
-      // Bekleyen paketler
-      const waitingPackages = packages.filter(p => p.status === 'beklemede' || p.status === 'waiting').length;
-
-      // Finansal özet - Finans sayfasıyla aynı hesaplama
+      // Calculate financial stats exactly like AdminFinance page
       let totalIncome = 0;
-      incomes.forEach(i => totalIncome += (i.amount || 0));
+      incomes.forEach((income: any) => totalIncome += (income.amount || 0));
       
       let totalExpense = 0;
-      expenses.forEach(e => totalExpense += (e.amount || 0));
+      expenses.forEach((expense: any) => totalExpense += (expense.amount || 0));
       
       const totalBalance = totalIncome - totalExpense;
 
-      // Aktif duyurular
-      const activeAnnouncements = announcements.filter(a => {
-        if (!a.expiresAt) return true;
-        return new Date(a.expiresAt) > new Date();
-      }).length;
+      // Update stats - use dashboard API for other data, finance service for financial data
+      setStats({
+        pendingDues: dashboardResponse.unpaidDues || 0,
+        pendingDuesAmount: dashboardResponse.unpaidAmount || 0,
+        openTickets: dashboardResponse.openTickets || 0,
+        totalApartments: dashboardResponse.totalApartments || 0,
+        totalIncome: totalIncome, // From finance service (same as AdminFinance)
+        totalExpense: totalExpense, // From finance service (same as AdminFinance)
+        totalBalance: totalBalance, // From finance service (same as AdminFinance)
+        recentAnnouncements: dashboardResponse.activeAnnouncements || 0,
+        waitingPackages: dashboardResponse.waitingPackages || 0,
+      });
 
-      // Son 2 duyuruyu al (en yeni önce)
+      // Recent announcements for display
       const latestAnnouncements = announcements
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .slice(0, 2);
       setRecentAnnouncements(latestAnnouncements);
 
-      // Bugünkü görevleri al (pending ve in_progress)
+      // Today's tasks for display
       const today = new Date();
       const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
@@ -145,31 +191,101 @@ function AdminDashboard() {
         .slice(0, 2);
       setTodayTasks(todayTasksList);
 
+      console.log('✅ Admin Dashboard Updated - Financial data from finance service:', {
+        totalIncome,
+        totalExpense,
+        totalBalance,
+        incomeCount: incomes.length,
+        expenseCount: expenses.length
+      });
+    } catch (error) {
+      console.error('❌ Dashboard API error:', error);
+      // Fallback to individual service calls if dashboard API fails
+      await loadDashboardFallback();
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const loadDashboardFallback = async () => {
+    // Fallback method using individual service calls (original implementation)
+    try {
+      const [dues, tickets, packages, incomes, expenses, residents, blocks] = await Promise.all([
+        dueService.getDues(user.siteId).catch(err => {
+          console.error('Dues API error:', err);
+          return [];
+        }),
+        ticketService.getTickets(user.siteId).catch(() => []),
+        packageService.getPackages(user.siteId).catch(() => []),
+        financeService.getIncomes(user.siteId).catch(() => []), // Use finance service
+        financeService.getExpenses(user.siteId).catch(() => []), // Use finance service
+        residentService.getResidents().catch(() => []),
+        siteService.getSiteBlocks(user.siteId).catch(() => []),
+      ]);
+
+      // Calculate stats manually (original logic)
+      const allApartmentsPromises = blocks.map((block: any) => 
+        residentService.getApartmentsByBlock(block.id).catch(() => [])
+      );
+      const allApartmentsArrays = await Promise.all(allApartmentsPromises);
+      const allApartments = allApartmentsArrays.flat();
+      
+      const uniqueApartments = allApartments.filter((apt: any, index: number, self: any[]) => 
+        index === self.findIndex((a: any) => a.id === apt.id)
+      );
+      const totalApartments = uniqueApartments.length;
+
+      const pendingDues = dues.filter((d: any) => 
+        d.status === 'bekliyor' || 
+        d.status === 'pending'
+      );
+      const pendingDuesAmount = pendingDues.reduce((sum: number, d: any) => sum + (d.amount || 0), 0);
+
+      const openTickets = tickets.filter((t: any) => {
+        const status = t.status.toLowerCase();
+        return status === 'open' || 
+               status === 'in_progress' || 
+               status === 'acik' || 
+               status === 'devam_ediyor';
+      }).length;
+
+      const waitingPackages = packages.filter((p: any) => p.status === 'beklemede' || p.status === 'waiting').length;
+
+      // Calculate financial stats exactly like AdminFinance page
+      let totalIncome = 0;
+      incomes.forEach((income: any) => totalIncome += (income.amount || 0));
+      
+      let totalExpense = 0;
+      expenses.forEach((expense: any) => totalExpense += (expense.amount || 0));
+      
+      const totalBalance = totalIncome - totalExpense;
+
       setStats({
         pendingDues: pendingDues.length,
         pendingDuesAmount,
         openTickets,
-        totalApartments: 0, // TODO: Apartment service'den çekilecek
-        totalIncome,
-        totalExpense,
-        totalBalance,
-        recentAnnouncements: activeAnnouncements,
+        totalApartments,
+        totalIncome, // From finance service (same as AdminFinance)
+        totalExpense, // From finance service (same as AdminFinance)
+        totalBalance, // From finance service (same as AdminFinance)
+        recentAnnouncements: 0,
         waitingPackages,
       });
-      
-      console.log('✅ Admin Dashboard Stats Updated:', {
+
+      console.log('✅ Fallback Dashboard Stats Updated - Financial data from finance service:', {
         pendingDues: pendingDues.length,
         pendingDuesAmount,
         openTickets,
         waitingPackages,
         totalIncome,
         totalExpense,
+        totalBalance,
+        incomeCount: incomes.length,
+        expenseCount: expenses.length
       });
     } catch (error) {
-      console.error('❌ Load dashboard error:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+      console.error('❌ Fallback dashboard error:', error);
     }
   };
 

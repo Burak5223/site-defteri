@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { StatCard } from "@/components/stat-card"
 import { ListItem } from "@/components/list-item"
 import { SectionHeader } from "@/components/section-header"
@@ -16,6 +17,10 @@ import {
   Wallet,
   TrendingUp,
   TrendingDown,
+  ArrowLeft,
+  ChevronRight,
+  Crown,
+  Home,
 } from "lucide-react"
 import type { UserRole, Site } from "@/lib/types"
 import {
@@ -26,7 +31,10 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useBackendData } from "@/hooks/use-backend-data"
+import { toast } from "@/hooks/use-toast"
 
 interface HomePageProps {
   role: UserRole
@@ -45,11 +53,115 @@ export function HomePage({ role, onNavigate, currentSite }: HomePageProps) {
     useBackend 
   } = useBackendData()
 
+  const [showResidentsModal, setShowResidentsModal] = useState(false)
+  const [selectedBlock, setSelectedBlock] = useState<any | null>(null)
+  const [selectedApartment, setSelectedApartment] = useState<any | null>(null)
+  const [blocks, setBlocks] = useState<any[]>([])
+  const [apartments, setApartments] = useState<any[]>([])
+  const [residents, setResidents] = useState<any[]>([])
+
   const pendingDues = dues.filter((d) => d.status === "pending" || d.status === "overdue")
   const openTickets = tickets.filter((t) => t.status === "open" || t.status === "in_progress")
   const pendingTasks = mockTasks.filter((t) => t.status === "pending" || t.status === "in_progress")
   const pendingPackages = mockPackages.filter((p) => p.status === "received")
   const siteResidents = mockResidents.filter((r) => r.siteId === currentSite.id)
+
+  // Load blocks when modal opens
+  useEffect(() => {
+    if (showResidentsModal && !selectedBlock) {
+      loadBlocks()
+    }
+  }, [showResidentsModal])
+
+  // Load apartments when block is selected
+  useEffect(() => {
+    if (selectedBlock) {
+      loadApartments(selectedBlock.id)
+    }
+  }, [selectedBlock])
+
+  // Load residents when apartment is selected
+  useEffect(() => {
+    if (selectedApartment) {
+      loadResidents(selectedApartment.id)
+    }
+  }, [selectedApartment])
+
+  const loadBlocks = async () => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/sites/${currentSite.id}/blocks`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+      const data = await response.json()
+      setBlocks(data)
+    } catch (error) {
+      console.error('Failed to load blocks:', error)
+      toast({
+        title: "Hata",
+        description: "Bloklar yüklenemedi",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const loadApartments = async (blockId: string) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/blocks/${blockId}/apartments`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+      const data = await response.json()
+      setApartments(data)
+    } catch (error) {
+      console.error('Failed to load apartments:', error)
+      toast({
+        title: "Hata",
+        description: "Daireler yüklenemedi",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const loadResidents = async (apartmentId: string) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/apartments/${apartmentId}/residents`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+      const data = await response.json()
+      setResidents(data)
+    } catch (error) {
+      console.error('Failed to load residents:', error)
+      toast({
+        title: "Hata",
+        description: "Sakinler yüklenemedi",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleCloseModal = () => {
+    setShowResidentsModal(false)
+    setSelectedBlock(null)
+    setSelectedApartment(null)
+    setBlocks([])
+    setApartments([])
+    setResidents([])
+  }
+
+  const handleBackFromApartment = () => {
+    setSelectedApartment(null)
+    setResidents([])
+  }
+
+  const handleBackFromBlock = () => {
+    setSelectedBlock(null)
+    setApartments([])
+  }
 
   const currentReport = monthlyReports[0]
 
@@ -227,7 +339,7 @@ export function HomePage({ role, onNavigate, currentSite }: HomePageProps) {
             <Button
               variant="outline"
               className="h-auto py-3 px-4 rounded-xl justify-start bg-transparent"
-              onClick={() => onNavigate("residents")}
+              onClick={() => setShowResidentsModal(true)}
             >
               <Users className="w-5 h-5 mr-3 text-primary" />
               <div className="text-left">
@@ -352,6 +464,141 @@ export function HomePage({ role, onNavigate, currentSite }: HomePageProps) {
         </section>
       )}
     </div>
+
+    {/* Residents Modal */}
+    <Dialog open={showResidentsModal} onOpenChange={handleCloseModal}>
+      <DialogContent className="max-w-sm mx-4 rounded-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {selectedApartment ? `Daire ${selectedApartment.unitNumber}` : 
+             selectedBlock ? selectedBlock.name : 
+             'Sakinler'}
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* Daire seçiliyse sakinleri göster */}
+        {selectedApartment && (
+          <div className="space-y-3">
+            <Button variant="ghost" size="sm" onClick={handleBackFromApartment} className="mb-2">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Geri
+            </Button>
+            
+            <div className="text-sm font-medium mb-2">Sakinler ({residents.length})</div>
+
+            <div className="space-y-2">
+              {residents.map((resident: any) => (
+                <Card key={resident.id}>
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-10 h-10 border-2 border-primary/10">
+                        <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                          {resident.fullName?.split(" ").map((n: string) => n[0]).join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-sm truncate">{resident.fullName}</p>
+                          {resident.residentType === 'owner' && (
+                            <Badge variant="default" className="text-xs">
+                              <Crown className="w-3 h-3 mr-1" />
+                              Malik
+                            </Badge>
+                          )}
+                          {resident.residentType === 'tenant' && (
+                            <Badge variant="secondary" className="text-xs">
+                              Kiracı
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">{resident.email}</p>
+                        <p className="text-xs text-muted-foreground">{resident.phone}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {residents.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                  Bu dairede sakin bulunamadı
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Blok seçiliyse daireleri göster */}
+        {selectedBlock && !selectedApartment && (
+          <div className="space-y-3">
+            <Button variant="ghost" size="sm" onClick={handleBackFromBlock} className="mb-2">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Geri
+            </Button>
+
+            <div className="text-sm font-medium mb-2">Daireler ({apartments.length})</div>
+
+            <div className="grid grid-cols-3 gap-2">
+              {apartments.map((apartment: any) => (
+                <Card 
+                  key={apartment.id} 
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => setSelectedApartment(apartment)}
+                >
+                  <CardContent className="p-3 text-center">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-1">
+                      <Home className="w-5 h-5 text-primary" />
+                    </div>
+                    <p className="font-bold text-base">{apartment.unitNumber}</p>
+                    <p className="text-[10px] text-muted-foreground">Kat {apartment.floor}</p>
+                  </CardContent>
+                </Card>
+              ))}
+              {apartments.length === 0 && (
+                <div className="col-span-3 text-center py-8 text-muted-foreground text-sm">
+                  Bu blokta daire bulunamadı
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Blokları göster */}
+        {!selectedBlock && !selectedApartment && (
+          <div className="space-y-3">
+            <div className="text-sm font-medium mb-2">Bloklar ({blocks.length})</div>
+
+            <div className="space-y-2">
+              {blocks.map((block: any) => (
+                <Card 
+                  key={block.id} 
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => setSelectedBlock(block)}
+                >
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <Building2 className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{block.name}</p>
+                        <p className="text-xs text-muted-foreground">{block.totalApartments || 0} daire</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {blocks.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                  Bu sitede blok bulunamadı
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  </div>
   )
 }
 

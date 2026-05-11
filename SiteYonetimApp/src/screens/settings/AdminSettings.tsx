@@ -59,30 +59,6 @@ const AdminSettings = () => {
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
-        {/* Bildirimler */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('settings.notifications')}</Text>
-          <View style={styles.settingCard}>
-            <View style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <View style={[styles.settingIcon, { backgroundColor: colors.primaryLight }]}>
-                  <Bell size={18} color={colors.primary} />
-                </View>
-                <View>
-                  <Text style={styles.settingTitle}>{t('settings.pushNotifications')}</Text>
-                  <Text style={styles.settingSubtitle}>{t('settings.instantNotifications')}</Text>
-                </View>
-              </View>
-              <Switch
-                value={notifications}
-                onValueChange={setNotifications}
-                trackColor={{ false: colors.gray300, true: colors.primary }}
-                thumbColor={colors.white}
-              />
-            </View>
-          </View>
-        </View>
-
         {/* Görünüm */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('settings.appearance')}</Text>

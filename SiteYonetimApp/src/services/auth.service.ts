@@ -30,7 +30,15 @@ export class AuthService {
       userId: response.userId || response.user?.id || '',
       siteId: response.siteId || '1',
       roles: response.roles || [],
-      permissions: response.permissions || []
+      permissions: response.permissions || [],
+      user: {
+        fullName: response.user?.fullName || response.fullName || '',
+        phone: response.user?.phone || response.phone || '',
+        siteId: response.siteId || '1',
+        email: response.user?.email || response.email || '',
+        apartmentId: response.user?.apartmentId || response.apartmentId,
+        residentType: response.user?.residentType || response.residentType
+      }
     };
 
     // Store tokens

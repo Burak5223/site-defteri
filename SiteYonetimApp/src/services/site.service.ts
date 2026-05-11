@@ -17,6 +17,9 @@ export interface Block {
   name: string;
   siteId: string;
   totalApartments: number;
+  totalOwners?: number;
+  totalTenants?: number;
+  totalResidents?: number;
 }
 
 export interface CreateSiteRequest {
@@ -39,6 +42,11 @@ export interface CreateBlockRequest {
   name: string;
   totalFloors: number;
   description?: string;
+}
+
+export interface CreateApartmentRequest {
+  unitNumber: string;
+  floor: number;
 }
 
 class SiteService {
@@ -74,8 +82,16 @@ class SiteService {
     return apiClient.put(`/sites/${siteId}/blocks/${blockId}`, data);
   }
 
-  async deleteBlock(siteId: string, blockId: string): Promise<void> {
-    return apiClient.delete(`/sites/${siteId}/blocks/${blockId}`);
+  async deleteBlock(blockId: string): Promise<void> {
+    return apiClient.delete(`/blocks/${blockId}`);
+  }
+
+  async createApartment(blockId: string, data: CreateApartmentRequest): Promise<any> {
+    return apiClient.post(`/blocks/${blockId}/apartments`, data);
+  }
+
+  async deleteApartment(apartmentId: string): Promise<void> {
+    return apiClient.delete(`/apartments/${apartmentId}`);
   }
 }
 

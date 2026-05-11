@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, RefreshControl, Pressable } from 'react-native';
 import { Sparkles, ClipboardList, CheckCircle, Bell, UserCircle, LogOut } from 'lucide-react-native';
 import { colors } from '../../theme';
 import { useAuth } from '../../context/AuthContext';
@@ -177,37 +177,37 @@ export function CleaningDashboard() {
 
       {/* Stats Grid */}
       <View style={styles.statsGrid}>
-        <View style={[styles.statCard, { backgroundColor: '#FFF4E6' }]}>
+        <Pressable style={[styles.statCard, { backgroundColor: '#FFF4E6' }]} onPress={() => navigation.navigate('CleaningTasks')}>
           <View style={[styles.statIcon, { backgroundColor: '#FFE4CC' }]}>
             <ClipboardList size={24} color="#FF9800" />
           </View>
           <Text style={styles.statValue}>{stats.todayTasks}</Text>
           <Text style={styles.statLabel}>Bugün Atanan</Text>
-        </View>
+        </Pressable>
 
-        <View style={[styles.statCard, { backgroundColor: '#E8F5E9' }]}>
+        <Pressable style={[styles.statCard, { backgroundColor: '#E8F5E9' }]} onPress={() => navigation.navigate('CleaningTasks')}>
           <View style={[styles.statIcon, { backgroundColor: '#C8E6C9' }]}>
             <CheckCircle size={24} color={colors.success} />
           </View>
           <Text style={styles.statValue}>{stats.completedToday}</Text>
           <Text style={styles.statLabel}>Bugün Tamamlanan</Text>
-        </View>
+        </Pressable>
 
-        <View style={[styles.statCard, { backgroundColor: '#E3F2FD' }]}>
+        <Pressable style={[styles.statCard, { backgroundColor: '#E3F2FD' }]} onPress={() => navigation.navigate('CleaningTasks')}>
           <View style={[styles.statIcon, { backgroundColor: '#BBDEFB' }]}>
             <ClipboardList size={24} color="#2196F3" />
           </View>
           <Text style={styles.statValue}>{stats.weekTasks}</Text>
           <Text style={styles.statLabel}>Bu Hafta Atanan</Text>
-        </View>
+        </Pressable>
 
-        <View style={[styles.statCard, { backgroundColor: '#F3E5F5' }]}>
+        <Pressable style={[styles.statCard, { backgroundColor: '#F3E5F5' }]} onPress={() => navigation.navigate('CleaningTasks')}>
           <View style={[styles.statIcon, { backgroundColor: '#E1BEE7' }]}>
             <CheckCircle size={24} color="#9C27B0" />
           </View>
           <Text style={styles.statValue}>{stats.completedWeek}</Text>
           <Text style={styles.statLabel}>Bu Hafta Tamamlanan</Text>
-        </View>
+        </Pressable>
       </View>
 
       {/* Son Duyurular */}
@@ -226,7 +226,11 @@ export function CleaningDashboard() {
           </View>
         ) : (
           recentAnnouncements.map((announcement) => (
-            <View key={announcement.id} style={styles.announcementCard}>
+            <Pressable 
+              key={announcement.id} 
+              style={styles.announcementCard}
+              onPress={() => navigation.navigate('ResidentAnnouncements')}
+            >
               <View style={styles.announcementIcon}>
                 <Bell size={20} color={
                   announcement.priority === 'high' ? '#ef4444' :
@@ -249,7 +253,7 @@ export function CleaningDashboard() {
                   {new Date(announcement.createdAt).toLocaleDateString('tr-TR')}
                 </Text>
               </View>
-            </View>
+            </Pressable>
           ))
         )}
       </View>
@@ -270,7 +274,11 @@ export function CleaningDashboard() {
           </View>
         ) : (
           todayTasks.map((task) => (
-            <View key={task.id} style={styles.taskCard}>
+            <Pressable 
+              key={task.id} 
+              style={styles.taskCard}
+              onPress={() => navigation.navigate('CleaningTasks')}
+            >
               <View style={[styles.taskIcon, { 
                 backgroundColor: task.status === 'completed' ? '#E8F5E9' : 
                                task.status === 'in_progress' ? '#E3F2FD' : '#FFF4E6'
@@ -301,7 +309,7 @@ export function CleaningDashboard() {
                    task.status === 'in_progress' ? 'Devam Ediyor' : 'Bekliyor'}
                 </Text>
               </View>
-            </View>
+            </Pressable>
           ))
         )}
       </View>

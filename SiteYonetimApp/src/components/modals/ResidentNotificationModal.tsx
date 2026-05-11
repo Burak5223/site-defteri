@@ -35,9 +35,14 @@ const ResidentNotificationModal: React.FC<ResidentNotificationModalProps> = ({
   // Auto-fill fullName and apartmentNumber from user profile
   useEffect(() => {
     if (visible && user) {
-      const name = `${user.firstName || ''} ${user.lastName || ''}`.trim();
-      setFullName(name);
-      setApartmentNumber(user.apartmentId || ''); // Using apartmentId as apartment number
+      // Use fullName from user profile
+      setFullName(user.fullName || '');
+      
+      // Format apartment number as "Block UnitNumber" (e.g., "A Blok 12")
+      const apartment = user.blockName && user.unitNumber 
+        ? `${user.blockName} ${user.unitNumber}`
+        : '';
+      setApartmentNumber(apartment);
     }
   }, [visible, user]);
 
@@ -49,7 +54,13 @@ const ResidentNotificationModal: React.FC<ResidentNotificationModalProps> = ({
     }
 
     if (!user?.userId || !user?.siteId || !user?.apartmentId) {
-      Alert.alert('⚠️ Hata', 'Kullanıcı bilgileri eksik', [{ text: 'Tamam' }]);
+      Alert.alert(
+        '⚠️ Kullanıcı Bilgileri Eksik', 
+        'Lütfen çıkış yapıp tekrar giriş yapın. Kullanıcı bilgileriniz güncellenecektir.',
+        [
+          { text: 'Tamam' }
+        ]
+      );
       return;
     }
 

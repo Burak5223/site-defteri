@@ -65,16 +65,18 @@ public class DueService {
     @Transactional(readOnly = true)
     public List<DueResponse> getDuesByUserId(String userId) {
         log.info("Fetching dues for user: {}", userId);
-        // Kullanıcının apartmanlarını bul
-        List<String> apartmentIds = apartmentRepository.findByCurrentResidentIdOrOwnerUserId(userId, userId)
+        // Kullanıcının residency_history tablosunda aktif olarak kayıtlı olduğu daireleri bul
+        List<String> apartmentIds = apartmentRepository.findByActiveResidency(userId)
                 .stream()
                 .map(apartment -> apartment.getId())
                 .collect(Collectors.toList());
         
         if (apartmentIds.isEmpty()) {
-            log.warn("No apartments found for user: {}", userId);
+            log.warn("No active residency found for user: {}", userId);
             return List.of();
         }
+        
+        log.info("Found {} apartments for user {}: {}", apartmentIds.size(), userId, apartmentIds);
         
         return dueRepository.findByApartmentIdInOrderByDueDateDesc(apartmentIds)
                 .stream()
@@ -203,7 +205,7 @@ public class DueService {
             case odendi:
                 return "paid";
             case bekliyor:
-                return "ödenmedi";
+                return "bekliyor";  // Keep Turkish status for consistency
             case kismi_odendi:
                 return "partially_paid";
             case gecikmis:
@@ -211,7 +213,7 @@ public class DueService {
             case iptal_edildi:
                 return "cancelled";
             default:
-                return "unpaid";
+                return "bekliyor";  // Default to pending
         }
     }
 }

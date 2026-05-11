@@ -29,6 +29,7 @@ export interface AuthResponse {
     siteId?: string;
     email?: string;
     apartmentId?: string;
+    residentType?: 'owner' | 'tenant';
   };
 }
 
@@ -44,6 +45,9 @@ export interface User {
   siteId: string;
   siteName?: string;
   apartmentId?: string;
+  blockName?: string;
+  unitNumber?: string;
+  residentType?: 'owner' | 'tenant';
 }
 
 // User Types
@@ -113,7 +117,7 @@ export interface ApartmentResponse {
 }
 
 export interface CreateApartmentRequest {
-  number: string;
+  unitNumber: string;
   blockId: string;
   floor: number;
 }

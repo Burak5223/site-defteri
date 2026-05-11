@@ -16,15 +16,20 @@ import {
   Shield,
   Users,
   ChevronLeft,
+  Building2,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { apiClient } from '../../api/apiClient';
 import { messageService, Message } from '../../services/message.service';
+import { siteService, Block } from '../../services/site.service';
 import { lightTheme } from '../../theme';
 import { useI18n } from '../../context/I18nContext';
 
-type ChatView = 'list' | 'group' | 'direct-chat' | 'apartment-chat' | 'system-chat';
+type ChatView = 'list' | 'group' | 'direct-chat' | 'apartment-chat' | 'system-chat' | 'block-view';
 
 interface MessageDisplay extends Message {
   senderRole?: string;
@@ -69,6 +74,9 @@ const MessagesScreen = ({ navigation }: any) => {
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [systemMessages, setSystemMessages] = useState<MessageDisplay[]>([]);
+  const [selectedBlock, setSelectedBlock] = useState<string | null>(null);
+  const [showBlockDropdown, setShowBlockDropdown] = useState(false);
+  const [blocks, setBlocks] = useState<Block[]>([]);
   
   // Role groups - her rolden bir kutucuk
   const [roleGroups, setRoleGroups] = useState<RoleGroup[]>([]);
@@ -82,12 +90,6 @@ const MessagesScreen = ({ navigation }: any) => {
   const userRole = user?.roles?.[0] || 'RESIDENT';
   const currentSiteName = 'Site Yönetimi';
   
-  // Kullanıcı admin, güvenlik veya temizlik mi?
-  // Check both with and without ROLE_ prefix
-  const isStaff = userRole === 'ADMIN' || userRole === 'ROLE_ADMIN' || 
-                  userRole === 'SECURITY' || userRole === 'ROLE_SECURITY' || 
-                  userRole === 'CLEANING' || userRole === 'ROLE_CLEANING';
-
   // Kullanıcı admin mi? (Sistem mesajları sadece adminler için)
   const isAdmin = userRole === 'ADMIN' || userRole === 'ROLE_ADMIN';
 
@@ -96,13 +98,13 @@ const MessagesScreen = ({ navigation }: any) => {
     console.log('User object:', JSON.stringify(user, null, 2));
     console.log('User roles array:', user?.roles);
     console.log('User Role (first):', userRole);
-    console.log('Is Staff:', isStaff);
     console.log('Site ID:', currentSiteId);
     
     loadContacts();
     loadMessages();
     loadApartments();
     loadSystemMessages();
+    loadBlocks();
   }, [user?.siteId]);
 
   const loadContacts = async () => {
@@ -308,7 +310,6 @@ const MessagesScreen = ({ navigation }: any) => {
       console.log('=== LOADING APARTMENTS ===');
       console.log('Site ID:', siteId);
       console.log('User Role:', userRole);
-      console.log('Is Staff:', isStaff);
       console.log('Calling API: /sites/' + siteId + '/messages/apartments');
       
       const data = await messageService.getApartments(siteId);
@@ -349,6 +350,27 @@ const MessagesScreen = ({ navigation }: any) => {
       })));
     } catch (error: any) {
       console.error('✗ Sistem mesajları yüklenemedi!');
+      console.error('Error details:', error);
+      console.error('Error message:', error?.message);
+    }
+  };
+
+  const loadBlocks = async () => {
+    try {
+      const siteId = user?.siteId || '1';
+      console.log('=== LOADING BLOCKS ===');
+      console.log('Site ID:', siteId);
+      
+      const data = await siteService.getSiteBlocks(siteId);
+      console.log('✓ Blocks loaded successfully!');
+      console.log('Number of blocks:', data.length);
+      setBlocks(data);
+      
+      if (data.length === 0) {
+        console.warn('⚠️ No blocks found for site:', siteId);
+      }
+    } catch (error: any) {
+      console.error('✗ Bloklar yüklenemedi!');
       console.error('Error details:', error);
       console.error('Error message:', error?.message);
     }
@@ -594,191 +616,155 @@ const MessagesScreen = ({ navigation }: any) => {
           </Pressable>
         )}
 
-        {/* Sakinler için: Her rolden bir kutucuk */}
-        {!isStaff && (
+        {/* Özel Mesajlar Bölümü - TÜM ROLLER İÇİN */}
+        {roleGroups.length > 0 && (
           <>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Özel Mesajlar</Text>
             </View>
 
-            {roleGroups.length === 0 && (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>Mesajlaşabileceğiniz personel bulunamadı</Text>
-              </View>
-            )}
-
-            {roleGroups.map((roleGroup) => {
-              const lastMsg = getLastMessage(roleGroup);
-              const unreadCount = getUnreadCount(roleGroup);
-              
-              return (
-              <Pressable
-                key={roleGroup.type}
-                style={styles.chatCard}
-                onPress={() => {
-                  // Eğer tek kişi varsa direkt aç, yoksa kişi seçtir
-                  if (roleGroup.users.length === 1) {
-                    setSelectedRoleGroup(roleGroup);
-                    setSelectedUserId(roleGroup.users[0].id);
-                    setChatView('direct-chat');
-                  } else {
-                    // Birden fazla kişi var, ilkini seç (veya modal göster)
-                    setSelectedRoleGroup(roleGroup);
-                    setSelectedUserId(roleGroup.users[0].id);
-                    setChatView('direct-chat');
-                  }
-                }}
-              >
-                <View style={styles.chatCardRow}>
-                  <View style={styles.chatIconContact}>
-                    <Shield size={20} color={roleGroup.type === 'admin' ? lightTheme.colors.primary : roleGroup.type === 'security' ? '#f59e0b' : '#10b981'} />
-                  </View>
-                  <View style={styles.chatInfo}>
-                    <Text style={styles.chatTitle}>{roleGroup.name}</Text>
-                    <Text style={styles.chatSubtitle}>
-                      {roleGroup.users.length} kişi • {roleGroup.role}
-                    </Text>
-                    {lastMsg && (
-                      <Text style={styles.chatLastMessage} numberOfLines={1}>
-                        {lastMsg.senderId === userId ? 'Sen: ' : `${lastMsg.senderName}: `}{lastMsg.body || ''}
-                      </Text>
-                    )}
-                  </View>
-                  {unreadCount > 0 && (
-                    <View style={styles.unreadBadge}>
-                      <Text style={styles.unreadText}>{unreadCount}</Text>
-                    </View>
-                  )}
-                </View>
-              </Pressable>
-            )})}
-
+                {roleGroups.map((roleGroup) => {
+                  const lastMsg = getLastMessage(roleGroup);
+                  const unreadCount = getUnreadCount(roleGroup);
+                  
+                  return (
+                    <Pressable
+                      key={roleGroup.type}
+                      style={styles.chatCard}
+                      onPress={() => {
+                        // Eğer tek kişi varsa direkt aç, yoksa kişi seçtir
+                        if (roleGroup.users.length === 1) {
+                          setSelectedRoleGroup(roleGroup);
+                          setSelectedUserId(roleGroup.users[0].id);
+                          setChatView('direct-chat');
+                        } else {
+                          // Birden fazla kişi var, ilkini seç (veya modal göster)
+                          setSelectedRoleGroup(roleGroup);
+                          setSelectedUserId(roleGroup.users[0].id);
+                          setChatView('direct-chat');
+                        }
+                      }}
+                    >
+                      <View style={styles.chatCardRow}>
+                        <View style={styles.chatIconContact}>
+                          <Shield size={20} color={roleGroup.type === 'admin' ? lightTheme.colors.primary : roleGroup.type === 'security' ? '#f59e0b' : '#10b981'} />
+                        </View>
+                        <View style={styles.chatInfo}>
+                          <Text style={styles.chatTitle}>{roleGroup.name}</Text>
+                          <Text style={styles.chatSubtitle}>
+                            {roleGroup.users.length} kişi • {roleGroup.role}
+                          </Text>
+                          {lastMsg && (
+                            <Text style={styles.chatLastMessage} numberOfLines={1}>
+                              {lastMsg.senderId === userId ? 'Sen: ' : `${lastMsg.senderName}: `}{lastMsg.body || ''}
+                            </Text>
+                          )}
+                        </View>
+                        {unreadCount > 0 && (
+                          <View style={styles.unreadBadge}>
+                            <Text style={styles.unreadText}>{unreadCount}</Text>
+                          </View>
+                        )}
+                      </View>
+                    </Pressable>
+                  );
+                })}
           </>
         )}
 
-        {/* Personel için: Her rolden bir kutucuk + daireler */}
-        {isStaff && (
+        {/* Daire Mesajları Bölümü - SADECE PERSONEL İÇİN (Admin, Güvenlik, Temizlikçi) */}
+        {(userRole === 'ADMIN' || userRole === 'ROLE_ADMIN' || 
+          userRole === 'SECURITY' || userRole === 'ROLE_SECURITY' ||
+          userRole === 'CLEANING' || userRole === 'ROLE_CLEANING') && (
           <>
-            {/* Özel Mesajlar - Her rolden bir kutucuk */}
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Özel Mesajlar</Text>
-            </View>
-
-            {roleGroups.length === 0 && (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>Mesajlaşabileceğiniz personel bulunamadı</Text>
-              </View>
-            )}
-
-            {roleGroups.map((roleGroup) => {
-              const lastMsg = getLastMessage(roleGroup);
-              const unreadCount = getUnreadCount(roleGroup);
-              
-              return (
-              <Pressable
-                key={roleGroup.type}
-                style={styles.chatCard}
-                onPress={() => {
-                  // Eğer tek kişi varsa direkt aç, yoksa ilkini seç
-                  if (roleGroup.users.length === 1) {
-                    setSelectedRoleGroup(roleGroup);
-                    setSelectedUserId(roleGroup.users[0].id);
-                    setChatView('direct-chat');
-                  } else {
-                    setSelectedRoleGroup(roleGroup);
-                    setSelectedUserId(roleGroup.users[0].id);
-                    setChatView('direct-chat');
-                  }
-                }}
-              >
-                <View style={styles.chatCardRow}>
-                  <View style={styles.chatIconContact}>
-                    <Shield size={20} color={roleGroup.type === 'admin' ? lightTheme.colors.primary : roleGroup.type === 'security' ? '#f59e0b' : '#10b981'} />
-                  </View>
-                  <View style={styles.chatInfo}>
-                    <Text style={styles.chatTitle}>{roleGroup.name}</Text>
-                    <Text style={styles.chatSubtitle}>
-                      {roleGroup.users.length} kişi • {roleGroup.role}
-                    </Text>
-                    {lastMsg && (
-                      <Text style={styles.chatLastMessage} numberOfLines={1}>
-                        {lastMsg.senderId === userId ? 'Sen: ' : `${lastMsg.senderName}: `}{lastMsg.body || ''}
-                      </Text>
-                    )}
-                  </View>
-                  {unreadCount > 0 && (
-                    <View style={styles.unreadBadge}>
-                      <Text style={styles.unreadText}>{unreadCount}</Text>
-                    </View>
-                  )}
-                </View>
-              </Pressable>
-            )})}
-
-
-            {/* Daire Mesajları */}
             <View style={[styles.sectionHeader, { marginTop: 16 }]}>
               <Text style={styles.sectionTitle}>Daire Mesajları</Text>
             </View>
 
-            <View style={styles.searchContainer}>
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Daire ara..."
-                placeholderTextColor="#9ca3af"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-            </View>
+            {/* Bloklar Dropdown */}
+            <Pressable
+              style={styles.blockDropdownContainer}
+              onPress={() => setShowBlockDropdown(!showBlockDropdown)}
+            >
+              <View style={styles.blockDropdownHeader}>
+                <View style={styles.chatIconPrimary}>
+                  <Building2 size={24} color={lightTheme.colors.primary} />
+                </View>
+                <View style={styles.chatInfo}>
+                  <Text style={styles.chatTitle}>Bloklar</Text>
+                  <Text style={styles.chatSubtitle}>
+                    {blocks.length} blok • {apartments.length} daire
+                  </Text>
+                </View>
+                {(() => {
+                  // Tüm bloklardaki okunmamış mesaj sayısı
+                  const totalBlockUnread = apartments.reduce((sum, apt) => {
+                    return sum + getUnreadCount(undefined, apt.id);
+                  }, 0);
+                  
+                  return totalBlockUnread > 0 ? (
+                    <View style={styles.unreadBadge}>
+                      <Text style={styles.unreadText}>{totalBlockUnread}</Text>
+                    </View>
+                  ) : null;
+                })()}
+                {showBlockDropdown ? (
+                  <ChevronUp size={20} color="#9ca3af" />
+                ) : (
+                  <ChevronDown size={20} color="#9ca3af" />
+                )}
+              </View>
+            </Pressable>
 
-            {apartments.length === 0 && (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>Daire bulunamadı</Text>
+            {/* Blok Listesi - Accordion Style */}
+            {showBlockDropdown && (
+              <View style={styles.blockAccordion}>
+                {blocks.length === 0 && (
+                  <View style={styles.emptyState}>
+                    <Text style={styles.emptyText}>Blok bulunamadı</Text>
+                  </View>
+                )}
+                
+                {blocks.map((block) => {
+                  const blockApartments = apartments.filter(apt => apt.block === block.name);
+                  
+                  // Bu bloktaki tüm dairelerin okunmamış mesaj sayısı
+                  const blockUnreadCount = blockApartments.reduce((sum, apt) => {
+                    return sum + getUnreadCount(undefined, apt.id);
+                  }, 0);
+                  
+                  return (
+                    <Pressable
+                      key={block.id}
+                      style={styles.blockAccordionItem}
+                      onPress={() => {
+                        setSelectedBlock(block.name);
+                        setChatView('block-view');
+                        setShowBlockDropdown(false);
+                      }}
+                    >
+                      <View style={styles.chatCardRow}>
+                        <View style={styles.chatIconSecondary}>
+                          <Building2 size={20} color={lightTheme.colors.primary} />
+                        </View>
+                        <View style={styles.chatInfo}>
+                          <Text style={styles.chatTitle}>{block.name}</Text>
+                          <Text style={styles.chatSubtitle}>
+                            {blockApartments.length} daire
+                          </Text>
+                        </View>
+                        {blockUnreadCount > 0 && (
+                          <View style={styles.unreadBadge}>
+                            <Text style={styles.unreadText}>{blockUnreadCount}</Text>
+                          </View>
+                        )}
+                        <ChevronRight size={16} color="#9ca3af" />
+                      </View>
+                    </Pressable>
+                  );
+                })}
               </View>
             )}
-
-            {filteredApartments.map((apartment) => {
-              const lastMsg = getLastMessage(undefined, apartment.id);
-              const unreadCount = getUnreadCount(undefined, apartment.id);
-              
-              // Personel için: Gönderen kişinin rolünü göster
-              let displayName = `Daire ${apartment.number || '?'}`;
-              if (lastMsg && lastMsg.senderId !== userId) {
-                // Mesaj daireden gelmiş, sakin adını göster
-                displayName = `Daire ${apartment.number || '?'}`;
-              }
-              
-              return (
-              <Pressable
-                key={apartment.id}
-                style={styles.chatCard}
-                onPress={() => {
-                  setSelectedApartment(apartment);
-                  setChatView('apartment-chat');
-                }}
-              >
-                <View style={styles.chatCardRow}>
-                  <View style={styles.chatIconApartment}>
-                    <Text style={styles.apartmentIconText}>{apartment.number || '?'}</Text>
-                  </View>
-                  <View style={styles.chatInfo}>
-                    <Text style={styles.chatTitle}>{displayName}</Text>
-                    <Text style={styles.chatSubtitle}>{apartment.residentName || 'simsiz Sakin'}</Text>
-                    {lastMsg && (
-                      <Text style={styles.chatLastMessage} numberOfLines={1}>
-                        {lastMsg.senderId === userId ? 'Sen: ' : ''}{lastMsg.body || ''}
-                      </Text>
-                    )}
-                  </View>
-                  {unreadCount > 0 && (
-                    <View style={styles.unreadBadge}>
-                      <Text style={styles.unreadText}>{unreadCount}</Text>
-                    </View>
-                  )}
-                </View>
-              </Pressable>
-            )})}
-
           </>
         )}
       </ScrollView>
@@ -1130,6 +1116,108 @@ const MessagesScreen = ({ navigation }: any) => {
     );
   };
 
+  const renderBlockView = () => {
+    if (!selectedBlock) return null;
+
+    const blockApartments = apartments.filter(apt => apt.block === selectedBlock);
+    
+    // Daire numaralarına göre sırala (sayısal sıralama)
+    const sortedApartments = blockApartments.sort((a, b) => {
+      const numA = parseInt(a.number) || 0;
+      const numB = parseInt(b.number) || 0;
+      return numA - numB;
+    });
+    
+    const filteredBlockApartments = sortedApartments.filter(apartment => {
+      const query = searchQuery.toLowerCase();
+      return (
+        apartment.number.toLowerCase().includes(query) ||
+        apartment.residentName.toLowerCase().includes(query)
+      );
+    });
+
+    return (
+      <View style={styles.flexContainer}>
+        <View style={styles.chatHeader}>
+          <Pressable
+            style={styles.headerBackButton}
+            onPress={() => {
+              setSelectedBlock(null);
+              setSearchQuery('');
+              setChatView('list');
+            }}
+          >
+            <ChevronLeft size={24} color="#020617" />
+          </Pressable>
+          <View style={styles.chatHeaderIconPrimary}>
+            <Building2 size={20} color={lightTheme.colors.primary} />
+          </View>
+          <View style={styles.chatHeaderInfo}>
+            <Text style={styles.chatHeaderTitle}>{selectedBlock}</Text>
+            <Text style={styles.chatHeaderSubtitle}>{blockApartments.length} daire</Text>
+          </View>
+        </View>
+
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Daire ara..."
+            placeholderTextColor="#9ca3af"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+
+        <ScrollView
+          style={styles.listScroll}
+          contentContainerStyle={styles.listScrollContent}
+        >
+          {filteredBlockApartments.length === 0 && (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>Daire bulunamadı</Text>
+            </View>
+          )}
+
+          {filteredBlockApartments.map((apartment) => {
+            const lastMsg = getLastMessage(undefined, apartment.id);
+            const unreadCount = getUnreadCount(undefined, apartment.id);
+            
+            return (
+              <Pressable
+                key={apartment.id}
+                style={styles.chatCard}
+                onPress={() => {
+                  setSelectedApartment(apartment);
+                  setChatView('apartment-chat');
+                }}
+              >
+                <View style={styles.chatCardRow}>
+                  <View style={styles.chatIconApartment}>
+                    <Text style={styles.apartmentIconText}>{apartment.number || '?'}</Text>
+                  </View>
+                  <View style={styles.chatInfo}>
+                    <Text style={styles.chatTitle}>Daire {apartment.number || '?'}</Text>
+                    <Text style={styles.chatSubtitle}>{apartment.residentName || 'İsimsiz Sakin'}</Text>
+                    {lastMsg && (
+                      <Text style={styles.chatLastMessage} numberOfLines={1}>
+                        {lastMsg.senderId === userId ? 'Sen: ' : ''}{lastMsg.body || ''}
+                      </Text>
+                    )}
+                  </View>
+                  {unreadCount > 0 && (
+                    <View style={styles.unreadBadge}>
+                      <Text style={styles.unreadText}>{unreadCount}</Text>
+                    </View>
+                  )}
+                </View>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  };
+
   if (isLoading && chatView === 'list') {
     return (
       <View style={styles.loadingContainer}>
@@ -1145,6 +1233,7 @@ const MessagesScreen = ({ navigation }: any) => {
       {chatView === 'direct-chat' && renderDirectChat()}
       {chatView === 'apartment-chat' && renderApartmentChat()}
       {chatView === 'system-chat' && renderSystemChat()}
+      {chatView === 'block-view' && renderBlockView()}
     </View>
   );
 };
@@ -1154,7 +1243,7 @@ export default MessagesScreen;
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f9fafb',
   },
   flexContainer: {
     flex: 1,
@@ -1163,127 +1252,142 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#f9fafb',
   },
   listHeader: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 12,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
   },
   listHeaderTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 24,
+    fontWeight: '700',
     color: '#020617',
   },
   listScroll: {
     flex: 1,
+    backgroundColor: '#f9fafb',
   },
   listScrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 24,
     rowGap: 12,
   },
   chatCard: {
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
     backgroundColor: '#ffffff',
-    padding: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   chatCardRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   chatIconPrimary: {
-    width: 48,
-    height: 48,
+    width: 56,
+    height: 56,
     borderRadius: 16,
-    backgroundColor: 'rgba(15,118,110,0.08)',
+    backgroundColor: 'rgba(15,118,110,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 16,
   },
   chatIconSecurity: {
-    width: 48,
-    height: 48,
+    width: 56,
+    height: 56,
     borderRadius: 16,
-    backgroundColor: 'rgba(245,158,11,0.08)',
+    backgroundColor: 'rgba(245,158,11,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 16,
   },
   chatIconContact: {
-    width: 48,
-    height: 48,
+    width: 56,
+    height: 56,
     borderRadius: 16,
-    backgroundColor: 'rgba(99,102,241,0.08)',
+    backgroundColor: 'rgba(99,102,241,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 16,
   },
   chatIconSystem: {
-    width: 48,
-    height: 48,
+    width: 56,
+    height: 56,
     borderRadius: 16,
-    backgroundColor: 'rgba(139,92,246,0.08)',
+    backgroundColor: 'rgba(139,92,246,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 16,
   },
   chatIconApartment: {
-    width: 48,
-    height: 48,
+    width: 56,
+    height: 56,
     borderRadius: 16,
-    backgroundColor: 'rgba(99,102,241,0.08)',
+    backgroundColor: 'rgba(99,102,241,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 16,
   },
   apartmentIconText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
     color: '#6366f1',
   },
   sectionHeader: {
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: 24,
+    marginBottom: 12,
+    paddingHorizontal: 20,
   },
   sectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     color: '#6b7280',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
   searchContainer: {
-    marginBottom: 12,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
+    backgroundColor: '#f9fafb',
   },
   searchInput: {
     borderWidth: 1,
     borderColor: '#e5e7eb',
     borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 15,
     color: '#020617',
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#ffffff',
   },
   chatInfo: {
     flex: 1,
   },
   chatTitle: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
     color: '#020617',
+    marginBottom: 4,
   },
   chatSubtitle: {
-    marginTop: 2,
-    fontSize: 12,
+    fontSize: 13,
     color: '#6b7280',
+    marginBottom: 2,
   },
   chatLastMessage: {
-    marginTop: 4,
-    fontSize: 11,
+    marginTop: 6,
+    fontSize: 13,
     color: '#9ca3af',
+    lineHeight: 18,
   },
   securitySectionHeader: {
     flexDirection: 'row',
@@ -1302,67 +1406,68 @@ const styles = StyleSheet.create({
   chatHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
     backgroundColor: '#ffffff',
   },
   headerBackButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 4,
+    marginRight: 8,
+    backgroundColor: '#f9fafb',
   },
   chatHeaderIconPrimary: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: 'rgba(15,118,110,0.08)',
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(15,118,110,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    marginRight: 12,
   },
   chatHeaderIconSecurity: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: 'rgba(245,158,11,0.08)',
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(245,158,11,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    marginRight: 12,
   },
   chatHeaderIconContact: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: 'rgba(99,102,241,0.08)',
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(99,102,241,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    marginRight: 12,
   },
   chatHeaderIconSystem: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: 'rgba(139,92,246,0.08)',
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(139,92,246,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    marginRight: 12,
   },
   chatHeaderIconApartment: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: 'rgba(99,102,241,0.08)',
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(99,102,241,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    marginRight: 12,
   },
   apartmentHeaderIconText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: '#6366f1',
   },
@@ -1370,13 +1475,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   chatHeaderTitle: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '700',
     color: '#020617',
+    marginBottom: 2,
   },
   chatHeaderSubtitle: {
-    marginTop: 2,
-    fontSize: 11,
+    fontSize: 13,
     color: '#6b7280',
   },
   securityNotice: {
@@ -1397,11 +1502,12 @@ const styles = StyleSheet.create({
   },
   messagesScroll: {
     flex: 1,
+    backgroundColor: '#f9fafb',
   },
   messagesScrollContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    rowGap: 4,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    rowGap: 8,
   },
   dateSeparator: {
     alignItems: 'center',
@@ -1482,31 +1588,37 @@ const styles = StyleSheet.create({
   inputBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
+    backgroundColor: '#ffffff',
     marginBottom: 0,
   },
   input: {
     flex: 1,
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    fontSize: 14,
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    fontSize: 15,
     color: '#020617',
-    backgroundColor: '#ffffff',
-    marginRight: 8,
+    backgroundColor: '#f9fafb',
+    marginRight: 12,
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 999,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: lightTheme.colors.primary,
+    shadowColor: lightTheme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   sendButtonSecurity: {
     width: 40,
@@ -1522,25 +1634,25 @@ const styles = StyleSheet.create({
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
+    paddingVertical: 60,
   },
   emptyText: {
-    marginTop: 8,
-    fontSize: 13,
+    marginTop: 12,
+    fontSize: 15,
     color: '#6b7280',
   },
   unreadBadge: {
-    minWidth: 24,
-    height: 24,
-    borderRadius: 12,
+    minWidth: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: '#ef4444',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
-    marginLeft: 8,
+    paddingHorizontal: 8,
+    marginLeft: 12,
   },
   unreadText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: '#ffffff',
   },
@@ -1562,5 +1674,40 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: '#ef4444',
+  },
+  blockDropdownContainer: {
+    marginHorizontal: 20,
+    marginVertical: 12,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  blockDropdownHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  blockAccordion: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  blockAccordionItem: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    marginBottom: 8,
+    padding: 14,
+  },
+  chatIconSecondary: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#e0f2fe',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
   },
 });

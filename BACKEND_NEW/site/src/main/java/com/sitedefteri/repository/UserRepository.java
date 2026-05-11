@@ -22,9 +22,16 @@ public interface UserRepository extends JpaRepository<User, String> {
            "JOIN residency_history rh ON u.id = rh.user_id " +
            "WHERE rh.apartment_id = :apartmentId " +
            "AND rh.status = 'active' " +
-           "AND rh.move_out_date IS NULL", 
+           "AND rh.is_deleted = FALSE", 
            nativeQuery = true)
     List<User> findByApartmentId(@Param("apartmentId") String apartmentId);
+    
+    // Get residency info for a user in an apartment
+    @Query(value = "SELECT rh.is_owner FROM residency_history rh " +
+           "WHERE rh.user_id = :userId AND rh.apartment_id = :apartmentId " +
+           "AND rh.status = 'active' AND rh.is_deleted = FALSE LIMIT 1", 
+           nativeQuery = true)
+    Boolean getIsOwnerByUserAndApartment(@Param("userId") String userId, @Param("apartmentId") String apartmentId);
     
     // Sitedeki tüm kullanıcıları bul
     @Query(value = "SELECT DISTINCT u.* FROM users u " +
@@ -37,8 +44,7 @@ public interface UserRepository extends JpaRepository<User, String> {
     // Kullanıcının rollerini bul (user_roles ve roles tablolarından)
     @Query(value = "SELECT r.name FROM user_roles ur " +
            "JOIN roles r ON ur.role_id = r.id " +
-           "WHERE ur.user_id = :userId " +
-           "AND ur.is_deleted = false", 
+           "WHERE ur.user_id = :userId", 
            nativeQuery = true)
     List<String> findRolesByUserId(@Param("userId") String userId);
     

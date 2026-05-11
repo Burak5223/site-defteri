@@ -14,4 +14,5 @@ public interface UserSiteMembershipRepository extends JpaRepository<UserSiteMemb
     List<UserSiteMembership> findByRoleType(String roleType);
     long countByRoleType(String roleType);
     long countBySiteIdAndRoleType(String siteId, String roleType);
+    long countBySiteIdAndRoleTypeAndIsDeletedAndStatus(String siteId, String roleType, boolean isDeleted, String status);
 }

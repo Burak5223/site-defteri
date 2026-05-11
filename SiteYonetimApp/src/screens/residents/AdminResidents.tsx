@@ -27,21 +27,19 @@ import {
 } from 'lucide-react-native';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
 import { residentService, Resident, InviteResidentRequest } from '../../services/resident.service';
-import { siteService, Block, CreateBlockRequest } from '../../services/site.service';
-import { dueService } from '../../services/due.service';
-import { useI18n } from '../../context/I18nContext';
+import { siteService, Block, CreateBlockRequest, CreateApartmentRequest } from '../../services/site.service';
 import { useAuth } from '../../context/AuthContext';
 
-type ViewMode = 'blocks' | 'residents';
+type ViewMode = 'blocks' | 'apartments' | 'residents';
 
 const AdminResidents = () => {
   const { user } = useAuth();
-  const { t } = useI18n();
   const [viewMode, setViewMode] = useState<ViewMode>('blocks');
   const [selectedBlock, setSelectedBlock] = useState<Block | null>(null);
+  const [selectedApartment, setSelectedApartment] = useState<any | null>(null);
+  const [apartments, setApartments] = useState<any[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
-  const [apartments, setApartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,9 +48,23 @@ const AdminResidents = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState<string | null>(null);
   const [showAddBlockModal, setShowAddBlockModal] = useState(false);
+  const [showDeleteBlockModal, setShowDeleteBlockModal] = useState(false);
+  const [blockToDelete, setBlockToDelete] = useState<Block | null>(null);
+  const [showAddApartmentModal, setShowAddApartmentModal] = useState(false);
+  const [showDeleteApartmentModal, setShowDeleteApartmentModal] = useState(false);
+  const [apartmentToDelete, setApartmentToDelete] = useState<any | null>(null);
+  const [showAssignApartmentModal, setShowAssignApartmentModal] = useState(false);
+  const [selectedResidentForAssignment, setSelectedResidentForAssignment] = useState<any | null>(null);
+  const [assignmentApartmentId, setAssignmentApartmentId] = useState('');
+  const [assignmentType, setAssignmentType] = useState<'owner' | 'tenant'>('owner');
+  const [allApartments, setAllApartments] = useState<any[]>([]);
   const [blockFormData, setBlockFormData] = useState({
     name: '',
     totalFloors: '',
+  });
+  const [apartmentFormData, setApartmentFormData] = useState({
+    unitNumber: '',
+    floor: '',
   });
 
   // Form state
@@ -63,78 +75,34 @@ const AdminResidents = () => {
     apartmentNumber: '',
     residentType: 'owner',
   });
-  const [userRole, setUserRole] = useState<'resident' | 'cleaning' | 'security'>('resident');
-  const [siteName, setSiteName] = useState('site');
 
   useEffect(() => {
     loadData();
-    loadSiteName();
   }, [user?.siteId]);
 
-  const loadSiteName = async () => {
-    if (!user?.siteId) return;
-    try {
-      const site = await siteService.getSiteById(user.siteId);
-      setSiteName(site.name || 'site');
-    } catch (error) {
-      console.log('Site adı alınamadı');
+  useEffect(() => {
+    if (blocks.length > 0) {
+      loadAllApartments();
     }
-  };
-
-  // E-posta otomatik oluşturma
-  const generateEmail = (fullName: string, site: string) => {
-    const cleanName = fullName
-      .toLowerCase()
-      .replace(/\s+/g, '')
-      .replace(/ğ/g, 'g')
-      .replace(/ü/g, 'u')
-      .replace(/ş/g, 's')
-      .replace(/ı/g, 'i')
-      .replace(/ö/g, 'o')
-      .replace(/ç/g, 'c');
-    
-    const cleanSite = site
-      .toLowerCase()
-      .replace(/\s+/g, '')
-      .replace(/ğ/g, 'g')
-      .replace(/ü/g, 'u')
-      .replace(/ş/g, 's')
-      .replace(/ı/g, 'i')
-      .replace(/ö/g, 'o')
-      .replace(/ç/g, 'c');
-    
-    return `${cleanName}@${cleanSite}.com`;
-  };
-
-  const handleNameChange = (name: string) => {
-    setFormData({
-      ...formData,
-      fullName: name,
-      email: generateEmail(name, siteName),
-    });
-  };
+  }, [blocks]);
 
   const loadData = async () => {
     if (!user?.siteId) {
-      console.log('No siteId found in user:', user);
       setLoading(false);
       setRefreshing(false);
       return;
     }
-
-    console.log('Loading data for siteId:', user.siteId);
 
     try {
       const [residentsData, blocksData] = await Promise.all([
         residentService.getResidents(),
         siteService.getSiteBlocks(user.siteId),
       ]);
-      console.log('Blocks loaded:', blocksData);
       setResidents(residentsData);
       setBlocks(blocksData);
     } catch (error) {
       console.error('Load data error:', error);
-      Alert.alert(t('common.error'), t('common.loading') + ' ' + t('common.error'));
+      Alert.alert('Hata', 'Veriler yüklenemedi');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -146,14 +114,37 @@ const AdminResidents = () => {
     loadData();
   };
 
-  const handleBlockPress = (block: Block) => {
+  const handleBlockPress = async (block: Block) => {
     setSelectedBlock(block);
-    setViewMode('residents');
+    setLoading(true);
+    try {
+      const apartmentsData = await residentService.getApartmentsByBlock(block.id);
+      setApartments(apartmentsData);
+      setViewMode('apartments');
+    } catch (error) {
+      console.error('Load apartments error:', error);
+      Alert.alert('Hata', 'Daireler yüklenemedi');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleBackToBlocks = () => {
     setSelectedBlock(null);
+    setSelectedApartment(null);
+    setApartments([]);
     setViewMode('blocks');
+    setSearchQuery('');
+  };
+
+  const handleApartmentPress = (apartment: any) => {
+    setSelectedApartment(apartment);
+    setViewMode('residents');
+  };
+
+  const handleBackToApartments = () => {
+    setSelectedApartment(null);
+    setViewMode('apartments');
     setSearchQuery('');
   };
 
@@ -162,22 +153,9 @@ const AdminResidents = () => {
     return residents.filter(r => r.blockName === selectedBlock.name);
   };
 
-  const filteredResidents = getBlockResidents().filter(resident =>
-    resident.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    resident.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    resident.phone.includes(searchQuery)
-  );
-
   const handleInvite = async () => {
-    // Validasyon
-    if (!formData.fullName || !formData.email) {
-      Alert.alert('Hata', 'Lütfen isim ve e-posta alanlarını doldurun');
-      return;
-    }
-
-    // Sakin için daire no zorunlu
-    if (userRole === 'resident' && !formData.apartmentNumber) {
-      Alert.alert('Hata', 'Lütfen daire numarasını girin');
+    if (!formData.fullName || !formData.email || !formData.apartmentNumber) {
+      Alert.alert('Hata', 'Lütfen tüm alanları doldurun');
       return;
     }
 
@@ -187,22 +165,7 @@ const AdminResidents = () => {
     }
 
     try {
-      // Rol bazlı veri hazırlama
-      const inviteData: any = {
-        fullName: formData.fullName,
-        email: formData.email,
-        phone: formData.phone,
-      };
-
-      if (userRole === 'resident') {
-        inviteData.apartmentNumber = formData.apartmentNumber;
-        inviteData.residentType = formData.residentType;
-      } else {
-        // Temizlikçi veya Güvenlik için rol bilgisi ekle
-        inviteData.role = userRole === 'cleaning' ? 'CLEANING' : 'SECURITY';
-      }
-
-      await residentService.inviteResident(inviteData, user.siteId);
+      await residentService.inviteResident(formData, user.siteId);
       Alert.alert('Başarılı', 'Davet gönderildi');
       setShowAddModal(false);
       resetForm();
@@ -220,23 +183,8 @@ const AdminResidents = () => {
     }
 
     try {
-      // Update basic user info
       await residentService.updateResident(selectedResident.id, formData);
-      
-      // Check if apartment changed
-      const selectedApartment = apartments.find(apt => apt.apartmentNumber === formData.apartmentNumber);
-      if (selectedApartment && selectedApartment.id !== selectedResident.apartmentId) {
-        // Apartment changed - call changeApartment endpoint
-        await residentService.changeApartment(
-          selectedResident.id,
-          selectedApartment.id,
-          formData.residentType || 'owner'
-        );
-        Alert.alert(t('common.success'), 'Kullanıcı bilgileri ve daire güncellendi');
-      } else {
-        Alert.alert(t('common.success'), t('residents.updateSuccess'));
-      }
-      
+      Alert.alert('Başarılı', 'Sakin güncellendi');
       setShowEditModal(false);
       setSelectedResident(null);
       resetForm();
@@ -249,8 +197,8 @@ const AdminResidents = () => {
 
   const handleRemove = async (id: string) => {
     Alert.alert(
-      t('residents.removeResident'),
-      t('residents.removeConfirm'),
+      'Sakini Kaldır',
+      'Bu sakini kaldırmak istediğinizden emin misiniz?',
       [
         { text: 'İptal', style: 'cancel' },
         {
@@ -259,10 +207,10 @@ const AdminResidents = () => {
           onPress: async () => {
             try {
               await residentService.removeResident(id);
-              Alert.alert(t('common.success'), t('residents.removeSuccess'));
+              Alert.alert('Başarılı', 'Sakin kaldırıldı');
               loadData();
             } catch (error) {
-              Alert.alert(t('common.error'), t('residents.removeError'));
+              Alert.alert('Hata', 'Sakin kaldırılamadı');
             }
           },
         },
@@ -270,36 +218,7 @@ const AdminResidents = () => {
     );
   };
 
-  const handleRemoveFromApartment = async (resident: Resident) => {
-    if (!resident.apartmentId) {
-      Alert.alert('Hata', 'Bu kullanıcının daire bilgisi bulunamadı');
-      return;
-    }
-
-    Alert.alert(
-      'Daireden Çıkar',
-      `${resident.fullName} isimli kullanıcıyı ${resident.apartmentNumber} numaralı daireden çıkarmak istediğinize emin misiniz?`,
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Çıkar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await residentService.removeResidentFromApartment(resident.id, resident.apartmentId!);
-              Alert.alert('Başarılı', 'Kullanıcı daireden çıkarıldı');
-              loadData();
-            } catch (error) {
-              console.error('Remove from apartment error:', error);
-              Alert.alert('Hata', 'Kullanıcı daireden çıkarılamadı');
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const openEditModal = async (resident: Resident) => {
+  const openEditModal = (resident: Resident) => {
     setSelectedResident(resident);
     setFormData({
       fullName: resident.fullName,
@@ -308,17 +227,6 @@ const AdminResidents = () => {
       apartmentNumber: resident.apartmentNumber || '',
       residentType: resident.residentType,
     });
-    
-    // Load apartments for dropdown
-    if (user?.siteId) {
-      try {
-        const apartmentsData = await dueService.getApartments(user.siteId);
-        setApartments(apartmentsData);
-      } catch (error) {
-        console.error('Failed to load apartments:', error);
-      }
-    }
-    
     setShowEditModal(true);
     setShowActionMenu(null);
   };
@@ -331,7 +239,6 @@ const AdminResidents = () => {
       apartmentNumber: '',
       residentType: 'owner',
     });
-    setUserRole('resident');
   };
 
   const handleAddBlock = async () => {
@@ -351,25 +258,134 @@ const AdminResidents = () => {
     }
 
     try {
-      setLoading(true);
       await siteService.createBlock(user.siteId, { 
         name: blockFormData.name.trim(),
         totalFloors: parseInt(blockFormData.totalFloors),
       });
-      
-      // Verileri yeniden yükle
-      await loadData();
-      
-      // Modal'ı kapat ve formu temizle
+      Alert.alert('Başarılı', 'Blok eklendi');
       setShowAddBlockModal(false);
       setBlockFormData({ name: '', totalFloors: '' });
-      
-      Alert.alert('Başarılı', 'Blok eklendi');
+      loadData();
     } catch (error) {
       console.error('Add block error:', error);
       Alert.alert('Hata', 'Blok eklenemedi');
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  const handleDeleteBlock = async () => {
+    if (!blockToDelete) return;
+
+    try {
+      await siteService.deleteBlock(blockToDelete.id);
+      Alert.alert('Başarılı', 'Blok kaldırıldı');
+      setShowDeleteBlockModal(false);
+      setBlockToDelete(null);
+      loadData();
+    } catch (error) {
+      console.error('Delete block error:', error);
+      Alert.alert('Hata', 'Blok kaldırılamadı');
+    }
+  };
+
+  const handleAddApartment = async () => {
+    if (!apartmentFormData.unitNumber.trim()) {
+      Alert.alert('Hata', 'Lütfen daire numarası girin');
+      return;
+    }
+
+    if (!apartmentFormData.floor || parseInt(apartmentFormData.floor) < 0) {
+      Alert.alert('Hata', 'Lütfen geçerli bir kat numarası girin');
+      return;
+    }
+
+    if (!selectedBlock) {
+      Alert.alert('Hata', 'Blok bilgisi bulunamadı');
+      return;
+    }
+
+    try {
+      await siteService.createApartment(selectedBlock.id, {
+        unitNumber: apartmentFormData.unitNumber.trim(),
+        floor: parseInt(apartmentFormData.floor),
+      });
+      Alert.alert('Başarılı', 'Daire eklendi');
+      setShowAddApartmentModal(false);
+      setApartmentFormData({ unitNumber: '', floor: '' });
+      // Refresh apartments
+      const apartmentsData = await residentService.getApartmentsByBlock(selectedBlock.id);
+      setApartments(apartmentsData);
+    } catch (error) {
+      console.error('Add apartment error:', error);
+      Alert.alert('Hata', 'Daire eklenemedi');
+    }
+  };
+
+  const handleDeleteApartment = async () => {
+    if (!apartmentToDelete) return;
+
+    try {
+      await siteService.deleteApartment(apartmentToDelete.id);
+      Alert.alert('Başarılı', 'Daire kaldırıldı');
+      setShowDeleteApartmentModal(false);
+      setApartmentToDelete(null);
+      // Refresh apartments
+      if (selectedBlock) {
+        const apartmentsData = await residentService.getApartmentsByBlock(selectedBlock.id);
+        setApartments(apartmentsData);
+      }
+    } catch (error) {
+      console.error('Delete apartment error:', error);
+      Alert.alert('Hata', 'Daire kaldırılamadı');
+    }
+  };
+
+  const handleAssignApartment = async () => {
+    if (!assignmentApartmentId) {
+      Alert.alert('Hata', 'Lütfen bir daire seçin');
+      return;
+    }
+
+    if (!selectedResidentForAssignment) {
+      Alert.alert('Hata', 'Sakin bilgisi bulunamadı');
+      return;
+    }
+
+    try {
+      await residentService.assignApartment(
+        selectedResidentForAssignment.id,
+        assignmentApartmentId,
+        assignmentType
+      );
+      Alert.alert('Başarılı', 'Sakin daireye atandı');
+      setShowAssignApartmentModal(false);
+      setSelectedResidentForAssignment(null);
+      setAssignmentApartmentId('');
+      setAssignmentType('owner');
+      loadData();
+      // Refresh apartments list
+      if (selectedBlock) {
+        const apartmentsData = await residentService.getApartmentsByBlock(selectedBlock.id);
+        setApartments(apartmentsData);
+      }
+    } catch (error) {
+      console.error('Assign apartment error:', error);
+      Alert.alert('Hata', 'Daire ataması yapılamadı');
+    }
+  };
+
+  const loadAllApartments = async () => {
+    if (!user?.siteId || blocks.length === 0) return;
+    
+    try {
+      // Tüm blokların dairelerini yükle
+      const allApartmentsPromises = blocks.map(block => 
+        residentService.getApartmentsByBlock(block.id)
+      );
+      const apartmentsArrays = await Promise.all(allApartmentsPromises);
+      const flattenedApartments = apartmentsArrays.flat();
+      setAllApartments(flattenedApartments);
+    } catch (error) {
+      console.error('Load all apartments error:', error);
     }
   };
 
@@ -413,7 +429,7 @@ const AdminResidents = () => {
                     <Building2 size={24} color={colors.primary} />
                   </View>
                   <View style={styles.blockInfo}>
-                    <Text style={styles.blockName}>{block.name} Blok</Text>
+                    <Text style={styles.blockName}>{block.name}</Text>
                     <Text style={styles.blockStats}>
                       {blockResidents.length} sakin • {ownerCount} malik • {tenantCount} kiracı
                     </Text>
@@ -432,12 +448,31 @@ const AdminResidents = () => {
           )}
         </ScrollView>
 
-        {/* Add Block Button */}
+        {/* Add/Delete Block Buttons */}
         <View style={styles.floatingButtonContainer}>
-          <Pressable style={styles.floatingButton} onPress={() => setShowAddBlockModal(true)}>
-            <Building2 size={20} color={colors.white} />
-            <Text style={styles.floatingButtonText}>Yeni Blok Ekle</Text>
-          </Pressable>
+          <View style={styles.buttonRow}>
+            <Pressable 
+              style={[styles.floatingButton, styles.floatingButtonPrimary]} 
+              onPress={() => setShowAddBlockModal(true)}
+            >
+              <Building2 size={20} color={colors.white} />
+              <Text style={styles.floatingButtonText}>Yeni Blok Ekle</Text>
+            </Pressable>
+            <Pressable 
+              style={[styles.floatingButton, styles.floatingButtonDanger]} 
+              onPress={() => {
+                if (blocks.length === 0) {
+                  Alert.alert('Uyarı', 'Kaldırılacak blok bulunamadı');
+                  return;
+                }
+                setBlockToDelete(blocks[0]);
+                setShowDeleteBlockModal(true);
+              }}
+            >
+              <Trash2 size={20} color={colors.white} />
+              <Text style={styles.floatingButtonText}>Blok Kaldır</Text>
+            </Pressable>
+          </View>
         </View>
 
         {/* Add Block Modal */}
@@ -479,7 +514,7 @@ const AdminResidents = () => {
                 </View>
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>Toplam Daire Sayısı</Text>
+                  <Text style={styles.label}>Toplam Kat Sayısı</Text>
                   <TextInput
                     style={styles.input}
                     placeholder="Örn: 5"
@@ -489,7 +524,7 @@ const AdminResidents = () => {
                     onChangeText={(text) => setBlockFormData({ ...blockFormData, totalFloors: text })}
                   />
                   <Text style={styles.helperText}>
-                    Bloktaki toplam daire sayısını girin
+                    Bloktaki toplam kat sayısını girin
                   </Text>
                 </View>
 
@@ -501,14 +536,293 @@ const AdminResidents = () => {
             </View>
           </View>
         </Modal>
+
+        {/* Delete Block Modal */}
+        <Modal 
+          visible={showDeleteBlockModal} 
+          transparent 
+          animationType="fade" 
+          onRequestClose={() => {
+            setShowDeleteBlockModal(false);
+            setBlockToDelete(null);
+          }}
+        >
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Blok Kaldır</Text>
+                <Pressable onPress={() => {
+                  setShowDeleteBlockModal(false);
+                  setBlockToDelete(null);
+                }}>
+                  <X size={24} color={colors.textPrimary} />
+                </Pressable>
+              </View>
+
+              <View style={styles.modalScroll}>
+                <Text style={styles.label}>Kaldırılacak Bloğu Seçin</Text>
+                <ScrollView style={styles.blockPicker} nestedScrollEnabled>
+                  {blocks.map(block => (
+                    <Pressable
+                      key={block.id}
+                      style={[
+                        styles.blockPickerItem,
+                        blockToDelete?.id === block.id && styles.blockPickerItemSelected
+                      ]}
+                      onPress={() => setBlockToDelete(block)}
+                    >
+                      <Building2 size={16} color={blockToDelete?.id === block.id ? colors.white : colors.primary} />
+                      <Text style={[
+                        styles.blockPickerText,
+                        blockToDelete?.id === block.id && styles.blockPickerTextSelected
+                      ]}>
+                        {block.name}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+
+                <Pressable 
+                  style={[styles.submitButton, styles.submitButtonDanger]} 
+                  onPress={handleDeleteBlock}
+                >
+                  <Trash2 size={16} color={colors.white} />
+                  <Text style={styles.submitButtonText}>Bloğu Kaldır</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     );
   }
 
-  // Residents View
-  const blockResidents = getBlockResidents();
-  const ownerCount = blockResidents.filter(r => r.residentType === 'owner').length;
-  const tenantCount = blockResidents.filter(r => r.residentType === 'tenant').length;
+  // Apartments View (Daire Listesi)
+  if (viewMode === 'apartments') {
+    const filteredApartments = apartments.filter(apartment =>
+      apartment.unitNumber.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    return (
+      <View style={styles.container}>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
+          }
+        >
+          {/* Header with Back Button */}
+          <Pressable style={styles.backButton} onPress={handleBackToBlocks}>
+            <ChevronRight size={20} color={colors.primary} style={{ transform: [{ rotate: '180deg' }] }} />
+            <Text style={styles.backButtonText}>Bloklar</Text>
+          </Pressable>
+
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>{selectedBlock?.name.replace(/ Blok$/i, '')} Daireleri</Text>
+            <Text style={styles.headerSubtitle}>{apartments.length} daire</Text>
+          </View>
+
+          {/* Search */}
+          <View style={styles.searchContainer}>
+            <View style={styles.searchInputContainer}>
+              <Search size={16} color={colors.textSecondary} style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Daire ara..."
+                placeholderTextColor={colors.textSecondary}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
+          </View>
+
+          {/* Apartments Grid */}
+          <View style={styles.apartmentsGrid}>
+            {filteredApartments.map(apartment => {
+              const apartmentResidents = apartment.residents || [];
+
+              return (
+                <Pressable
+                  key={apartment.id}
+                  style={styles.apartmentGridCard}
+                  onPress={() => handleApartmentPress(apartment)}
+                >
+                  <View style={styles.apartmentIcon}>
+                    <Home size={32} color={colors.primary} />
+                  </View>
+                  <Text style={styles.apartmentGridNumber}>{apartment.unitNumber}</Text>
+                  <Text style={styles.apartmentGridResidents}>
+                    {apartmentResidents.length} sakin
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {filteredApartments.length === 0 && (
+            <View style={styles.emptyState}>
+              <Home size={48} color={colors.textSecondary} style={{ opacity: 0.5 }} />
+              <Text style={styles.emptyText}>
+                {searchQuery ? 'Arama kriterine uygun daire bulunamadı' : 'Daire bulunamadı'}
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Add/Delete Apartment Buttons */}
+        <View style={styles.floatingButtonContainer}>
+          <View style={styles.buttonRow}>
+            <Pressable 
+              style={[styles.floatingButton, styles.floatingButtonPrimary]} 
+              onPress={() => setShowAddApartmentModal(true)}
+            >
+              <Home size={20} color={colors.white} />
+              <Text style={styles.floatingButtonText}>Yeni Daire Ekle</Text>
+            </Pressable>
+            <Pressable 
+              style={[styles.floatingButton, styles.floatingButtonDanger]} 
+              onPress={() => {
+                if (apartments.length === 0) {
+                  Alert.alert('Uyarı', 'Kaldırılacak daire bulunamadı');
+                  return;
+                }
+                setApartmentToDelete(apartments[0]);
+                setShowDeleteApartmentModal(true);
+              }}
+            >
+              <Trash2 size={20} color={colors.white} />
+              <Text style={styles.floatingButtonText}>Daire Kaldır</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Add Apartment Modal */}
+        <Modal 
+          visible={showAddApartmentModal} 
+          transparent 
+          animationType="slide" 
+          onRequestClose={() => {
+            setShowAddApartmentModal(false);
+            setApartmentFormData({ unitNumber: '', floor: '' });
+          }}
+        >
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Yeni Daire Ekle</Text>
+                <Pressable onPress={() => {
+                  setShowAddApartmentModal(false);
+                  setApartmentFormData({ unitNumber: '', floor: '' });
+                }}>
+                  <X size={24} color={colors.textPrimary} />
+                </Pressable>
+              </View>
+
+              <View style={styles.modalScroll}>
+                <View style={styles.formGroup}>
+                  <Text style={styles.label}>Daire Numarası</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Örn: 12"
+                    placeholderTextColor={colors.textSecondary}
+                    value={apartmentFormData.unitNumber}
+                    onChangeText={(text) => setApartmentFormData({ ...apartmentFormData, unitNumber: text })}
+                    autoFocus
+                  />
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.label}>Kat Numarası</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Örn: 3"
+                    placeholderTextColor={colors.textSecondary}
+                    keyboardType="numeric"
+                    value={apartmentFormData.floor}
+                    onChangeText={(text) => setApartmentFormData({ ...apartmentFormData, floor: text })}
+                  />
+                </View>
+
+                <Pressable style={styles.submitButton} onPress={handleAddApartment}>
+                  <Home size={16} color={colors.white} />
+                  <Text style={styles.submitButtonText}>Daire Ekle</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Delete Apartment Modal */}
+        <Modal 
+          visible={showDeleteApartmentModal} 
+          transparent 
+          animationType="fade" 
+          onRequestClose={() => {
+            setShowDeleteApartmentModal(false);
+            setApartmentToDelete(null);
+          }}
+        >
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Daire Kaldır</Text>
+                <Pressable onPress={() => {
+                  setShowDeleteApartmentModal(false);
+                  setApartmentToDelete(null);
+                }}>
+                  <X size={24} color={colors.textPrimary} />
+                </Pressable>
+              </View>
+
+              <View style={styles.modalScroll}>
+                <Text style={styles.label}>Kaldırılacak Daireyi Seçin</Text>
+                <ScrollView style={styles.apartmentPicker} nestedScrollEnabled>
+                  {apartments.map(apartment => (
+                    <Pressable
+                      key={apartment.id}
+                      style={[
+                        styles.apartmentPickerItem,
+                        apartmentToDelete?.id === apartment.id && styles.apartmentPickerItemSelected
+                      ]}
+                      onPress={() => setApartmentToDelete(apartment)}
+                    >
+                      <Home size={16} color={apartmentToDelete?.id === apartment.id ? colors.white : colors.primary} />
+                      <Text style={[
+                        styles.apartmentPickerText,
+                        apartmentToDelete?.id === apartment.id && styles.apartmentPickerTextSelected
+                      ]}>
+                        Daire {apartment.unitNumber}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+
+                <Pressable 
+                  style={[styles.submitButton, styles.submitButtonDanger]} 
+                  onPress={handleDeleteApartment}
+                >
+                  <Trash2 size={16} color={colors.white} />
+                  <Text style={styles.submitButtonText}>Daireyi Kaldır</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </View>
+    );
+  }
+
+  // Residents View (Seçili Dairenin Sakinleri)
+  if (viewMode === 'residents' && selectedApartment) {
+    const apartmentResidents = selectedApartment.residents || [];
+    const filteredResidents = apartmentResidents.filter((resident: any) =>
+      resident.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      resident.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      resident.phone.includes(searchQuery)
+    );
+    const ownerCount = apartmentResidents.filter((r: any) => r.residentType === 'owner').length;
+    const tenantCount = apartmentResidents.filter((r: any) => r.residentType === 'tenant').length;
 
   return (
     <View style={styles.container}>
@@ -520,20 +834,20 @@ const AdminResidents = () => {
         }
       >
         {/* Header with Back Button */}
-        <Pressable style={styles.backButton} onPress={handleBackToBlocks}>
+        <Pressable style={styles.backButton} onPress={handleBackToApartments}>
           <ChevronRight size={20} color={colors.primary} style={{ transform: [{ rotate: '180deg' }] }} />
-          <Text style={styles.backButtonText}>Bloklar</Text>
+          <Text style={styles.backButtonText}>Daireler</Text>
         </Pressable>
 
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>{selectedBlock?.name} Blok Sakinleri</Text>
-          <Text style={styles.headerSubtitle}>{blockResidents.length} sakin</Text>
+          <Text style={styles.headerTitle}>Daire {selectedApartment.unitNumber} Sakinleri</Text>
+          <Text style={styles.headerSubtitle}>{selectedBlock?.name.replace(/ Blok$/i, '')} • {apartmentResidents.length} sakin</Text>
         </View>
 
         {/* Stats */}
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{blockResidents.length}</Text>
+            <Text style={styles.statValue}>{apartmentResidents.length}</Text>
             <Text style={styles.statLabel}>Toplam</Text>
           </View>
           <View style={styles.statCard}>
@@ -546,7 +860,7 @@ const AdminResidents = () => {
           </View>
         </View>
 
-        {/* Search and Actions */}
+        {/* Search and Add */}
         <View style={styles.searchContainer}>
           <View style={styles.searchInputContainer}>
             <Search size={16} color={colors.textSecondary} style={styles.searchIcon} />
@@ -558,9 +872,12 @@ const AdminResidents = () => {
               onChangeText={setSearchQuery}
             />
           </View>
-          <Pressable style={styles.addButton} onPress={() => setShowAddModal(true)}>
+          <Pressable 
+            style={styles.addButton} 
+            onPress={() => setShowAddModal(true)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <UserPlus size={16} color={colors.white} />
-            <Text style={styles.actionButtonText}>Ekle</Text>
           </Pressable>
         </View>
 
@@ -571,82 +888,80 @@ const AdminResidents = () => {
               <View style={styles.residentHeader}>
                 <View style={styles.avatar}>
                   <Text style={styles.avatarText}>
-                    {resident.fullName.split(' ').map(n => n[0]).join('')}
+                    {resident.fullName.split(' ').map(n => n[0]).join('').toUpperCase()}
                   </Text>
                 </View>
                 <View style={styles.residentInfo}>
-                  <View style={styles.residentNameRow}>
-                    <Text style={styles.residentName}>{resident.fullName}</Text>
-                    {resident.residentType === 'owner' && (
-                      <Crown size={14} color={colors.warning} />
-                    )}
-                  </View>
-                  <View style={styles.badgeRow}>
-                    <View style={[
-                      styles.badge,
-                      resident.residentType === 'owner' ? styles.badgePrimary : styles.badgeSecondary
-                    ]}>
-                      <Text style={[
-                        styles.badgeText,
-                        resident.residentType === 'owner' ? styles.badgeTextPrimary : styles.badgeTextSecondary
-                      ]}>
-                        {resident.residentType === 'owner' ? 'Kat Maliki' : 'Kiracı'}
-                      </Text>
-                    </View>
-                  </View>
-                  {resident.apartmentNumber && (
-                    <View style={styles.apartmentInfo}>
-                      <Home size={12} color={colors.textSecondary} />
-                      <Text style={styles.apartmentText}>Daire {resident.apartmentNumber}</Text>
-                    </View>
-                  )}
+                  <Text style={styles.residentName}>{resident.fullName}</Text>
                   <View style={styles.contactInfo}>
-                    <Phone size={12} color={colors.textSecondary} />
+                    <Home size={14} color={colors.textSecondary} />
+                    <Text style={styles.contactText}>Daire {selectedApartment.unitNumber}</Text>
+                  </View>
+                  <View style={styles.contactInfo}>
+                    <Phone size={14} color={colors.textSecondary} />
                     <Text style={styles.contactText}>{resident.phone}</Text>
                   </View>
+                  <View style={styles.contactInfo}>
+                    <Mail size={14} color={colors.textSecondary} />
+                    <Text style={styles.contactText}>{resident.email}</Text>
+                  </View>
                 </View>
-                <Pressable
-                  style={styles.menuButton}
-                  onPress={() => setShowActionMenu(showActionMenu === resident.id ? null : resident.id)}
-                >
-                  <MoreVertical size={16} color={colors.textSecondary} />
-                </Pressable>
+                <View style={[
+                  styles.roleBadge,
+                  resident.residentType === 'owner' ? styles.roleBadgeOwner : styles.roleBadgeTenant
+                ]}>
+                  <Text style={styles.roleBadgeText}>
+                    {resident.residentType === 'owner' ? 'Malik' : 'Kiracı'}
+                  </Text>
+                </View>
               </View>
 
-              {/* Action Menu */}
-              {showActionMenu === resident.id && (
-                <View style={styles.actionMenu}>
-                  <Pressable
-                    style={styles.actionMenuItem}
-                    onPress={() => openEditModal(resident)}
-                  >
-                    <Edit size={14} color={colors.textPrimary} />
-                    <Text style={styles.actionMenuText}>Düzenle</Text>
-                  </Pressable>
-                  {resident.apartmentId && (
-                    <Pressable
-                      style={styles.actionMenuItem}
-                      onPress={() => {
-                        handleRemoveFromApartment(resident);
-                        setShowActionMenu(null);
-                      }}
-                    >
-                      <Home size={14} color={colors.warning} />
-                      <Text style={[styles.actionMenuText, { color: colors.warning }]}>Daireden Çıkar</Text>
-                    </Pressable>
-                  )}
-                  <Pressable
-                    style={styles.actionMenuItem}
-                    onPress={() => {
-                      handleRemove(resident.id);
-                      setShowActionMenu(null);
-                    }}
-                  >
-                    <Trash2 size={14} color={colors.error} />
-                    <Text style={[styles.actionMenuText, { color: colors.error }]}>Kaldır</Text>
-                  </Pressable>
-                </View>
-              )}
+              {/* Action Buttons */}
+              <View style={styles.actionButtons}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.actionButton, 
+                    styles.actionButtonEdit,
+                    pressed && { opacity: 0.7 }
+                  ]}
+                  onPress={() => openEditModal(resident)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  android_ripple={{ color: 'rgba(255,255,255,0.3)' }}
+                >
+                  <Edit size={14} color={colors.white} />
+                  <Text style={styles.actionButtonText}>Düzenle</Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.actionButton, 
+                    styles.actionButtonAdd,
+                    pressed && { opacity: 0.7 }
+                  ]}
+                  onPress={() => {
+                    console.log('Daire Ekle button pressed for resident:', resident.fullName);
+                    setSelectedResidentForAssignment(resident);
+                    setShowAssignApartmentModal(true);
+                  }}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  android_ripple={{ color: 'rgba(255,255,255,0.3)' }}
+                >
+                  <Home size={14} color={colors.white} />
+                  <Text style={styles.actionButtonText}>Daire Ekle</Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.actionButton, 
+                    styles.actionButtonRemove,
+                    pressed && { opacity: 0.7 }
+                  ]}
+                  onPress={() => handleRemove(resident.id)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  android_ripple={{ color: 'rgba(255,255,255,0.3)' }}
+                >
+                  <Trash2 size={14} color={colors.white} />
+                  <Text style={styles.actionButtonText}>Çıkar</Text>
+                </Pressable>
+              </View>
             </View>
           ))}
         </View>
@@ -658,6 +973,25 @@ const AdminResidents = () => {
           </View>
         )}
       </ScrollView>
+
+      {/* Add Resident Button */}
+      <View style={styles.floatingButtonContainer}>
+        <Pressable 
+          style={[styles.floatingButton, styles.floatingButtonPrimary]} 
+          onPress={() => {
+            // Pre-fill apartment number with current apartment
+            setFormData({
+              ...formData,
+              apartmentNumber: selectedApartment.unitNumber,
+            });
+            setShowAddModal(true);
+          }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <UserPlus size={20} color={colors.white} />
+          <Text style={styles.floatingButtonText}>Yeni Sakin Ekle</Text>
+        </Pressable>
+      </View>
 
       {/* Add/Edit Modal */}
       <Modal 
@@ -685,38 +1019,7 @@ const AdminResidents = () => {
               </Pressable>
             </View>
 
-            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={true}>
-              {/* Rol Seçimi */}
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>Kullanıcı Rolü</Text>
-                <View style={styles.roleGroup}>
-                  <Pressable
-                    style={[styles.roleButton, userRole === 'resident' && styles.roleButtonActive]}
-                    onPress={() => setUserRole('resident')}
-                  >
-                    <Text style={[styles.roleText, userRole === 'resident' && styles.roleTextActive]}>
-                      Sakin
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.roleButton, userRole === 'cleaning' && styles.roleButtonActive]}
-                    onPress={() => setUserRole('cleaning')}
-                  >
-                    <Text style={[styles.roleText, userRole === 'cleaning' && styles.roleTextActive]}>
-                      Temizlikçi
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.roleButton, userRole === 'security' && styles.roleButtonActive]}
-                    onPress={() => setUserRole('security')}
-                  >
-                    <Text style={[styles.roleText, userRole === 'security' && styles.roleTextActive]}>
-                      Güvenlik
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-
+            <ScrollView style={styles.modalScroll}>
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Ad Soyad</Text>
                 <TextInput
@@ -724,22 +1027,20 @@ const AdminResidents = () => {
                   placeholder="Örn: Ahmet Yılmaz"
                   placeholderTextColor={colors.textSecondary}
                   value={formData.fullName}
-                  onChangeText={handleNameChange}
+                  onChangeText={(text) => setFormData({ ...formData, fullName: text })}
                 />
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>E-posta (Otomatik)</Text>
+                <Text style={styles.label}>E-posta</Text>
                 <TextInput
-                  style={[styles.input, styles.disabledInput]}
-                  placeholder="E-posta otomatik oluşturulacak"
+                  style={styles.input}
+                  placeholder="ornek@email.com"
                   placeholderTextColor={colors.textSecondary}
+                  keyboardType="email-address"
                   value={formData.email}
-                  editable={false}
+                  onChangeText={(text) => setFormData({ ...formData, email: text })}
                 />
-                <Text style={styles.helperText}>
-                  E-posta isminize göre otomatik oluşturulur
-                </Text>
               </View>
 
               <View style={styles.formGroup}>
@@ -754,69 +1055,39 @@ const AdminResidents = () => {
                 />
               </View>
 
-              {/* Sadece Sakin için Daire No ve Tip */}
-              {userRole === 'resident' && (
-                <>
-                  <View style={styles.formGroup}>
-                    <Text style={styles.label}>Daire No</Text>
-                    {showEditModal && apartments.length > 0 ? (
-                      <View>
-                        <Text style={styles.helperText}>Mevcut: {selectedResident?.apartmentNumber || 'Yok'}</Text>
-                        <ScrollView style={styles.apartmentList} nestedScrollEnabled>
-                          {apartments.map((apt) => (
-                            <Pressable
-                              key={apt.id}
-                              style={[
-                                styles.apartmentItem,
-                                formData.apartmentNumber === apt.apartmentNumber && styles.apartmentItemSelected
-                              ]}
-                              onPress={() => setFormData({ ...formData, apartmentNumber: apt.apartmentNumber })}
-                            >
-                              <Text style={[
-                                styles.apartmentItemText,
-                                formData.apartmentNumber === apt.apartmentNumber && styles.apartmentItemTextSelected
-                              ]}>
-                                Daire {apt.apartmentNumber} - {apt.status === 'bos' ? 'Boş' : 'Dolu'}
-                              </Text>
-                            </Pressable>
-                          ))}
-                        </ScrollView>
-                      </View>
-                    ) : (
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Örn: 12"
-                        placeholderTextColor={colors.textSecondary}
-                        keyboardType="numeric"
-                        value={formData.apartmentNumber}
-                        onChangeText={(text) => setFormData({ ...formData, apartmentNumber: text })}
-                      />
-                    )}
-                  </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Daire No</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Örn: 12"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="numeric"
+                  value={formData.apartmentNumber}
+                  onChangeText={(text) => setFormData({ ...formData, apartmentNumber: text })}
+                />
+              </View>
 
-                  <View style={styles.formGroup}>
-                    <Text style={styles.label}>Sakin Tipi</Text>
-                    <View style={styles.radioGroup}>
-                      <Pressable
-                        style={[styles.radioButton, formData.residentType === 'owner' && styles.radioButtonActive]}
-                        onPress={() => setFormData({ ...formData, residentType: 'owner' })}
-                      >
-                        <Text style={[styles.radioText, formData.residentType === 'owner' && styles.radioTextActive]}>
-                          Kat Maliki
-                        </Text>
-                      </Pressable>
-                      <Pressable
-                        style={[styles.radioButton, formData.residentType === 'tenant' && styles.radioButtonActive]}
-                        onPress={() => setFormData({ ...formData, residentType: 'tenant' })}
-                      >
-                        <Text style={[styles.radioText, formData.residentType === 'tenant' && styles.radioTextActive]}>
-                          Kiracı
-                        </Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                </>
-              )}
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Sakin Tipi</Text>
+                <View style={styles.radioGroup}>
+                  <Pressable
+                    style={[styles.radioButton, formData.residentType === 'owner' && styles.radioButtonActive]}
+                    onPress={() => setFormData({ ...formData, residentType: 'owner' })}
+                  >
+                    <Text style={[styles.radioText, formData.residentType === 'owner' && styles.radioTextActive]}>
+                      Kat Maliki
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.radioButton, formData.residentType === 'tenant' && styles.radioButtonActive]}
+                    onPress={() => setFormData({ ...formData, residentType: 'tenant' })}
+                  >
+                    <Text style={[styles.radioText, formData.residentType === 'tenant' && styles.radioTextActive]}>
+                      Kiracı
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
 
               <Pressable 
                 style={styles.submitButton} 
@@ -831,6 +1102,123 @@ const AdminResidents = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Assign Apartment Modal */}
+      <Modal 
+        visible={showAssignApartmentModal} 
+        transparent 
+        animationType="slide" 
+        onRequestClose={() => {
+          setShowAssignApartmentModal(false);
+          setSelectedResidentForAssignment(null);
+          setAssignmentApartmentId('');
+          setAssignmentType('owner');
+        }}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Daire Ata</Text>
+              <Pressable onPress={() => {
+                setShowAssignApartmentModal(false);
+                setSelectedResidentForAssignment(null);
+                setAssignmentApartmentId('');
+                setAssignmentType('owner');
+              }}>
+                <X size={24} color={colors.textPrimary} />
+              </Pressable>
+            </View>
+
+            <ScrollView style={styles.modalScroll}>
+              {selectedResidentForAssignment && (
+                <View style={styles.formGroup}>
+                  <Text style={styles.label}>Sakin</Text>
+                  <Text style={styles.selectedResidentText}>{selectedResidentForAssignment.fullName}</Text>
+                </View>
+              )}
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Daire Seç (Tüm Bloklar)</Text>
+                <Text style={styles.helperText}>
+                  Sitedeki tüm daireler listeleniyor. İstediğiniz daireyi seçin.
+                </Text>
+                <ScrollView style={styles.apartmentPicker} nestedScrollEnabled>
+                  {allApartments.length === 0 ? (
+                    <Text style={styles.emptyPickerText}>Daire bulunamadı</Text>
+                  ) : (
+                    allApartments.map(apartment => (
+                      <Pressable
+                        key={apartment.id}
+                        style={[
+                          styles.apartmentPickerItem,
+                          assignmentApartmentId === apartment.id && styles.apartmentPickerItemSelected
+                        ]}
+                        onPress={() => setAssignmentApartmentId(apartment.id)}
+                      >
+                        <Home size={16} color={assignmentApartmentId === apartment.id ? colors.white : colors.primary} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={[
+                            styles.apartmentPickerText,
+                            assignmentApartmentId === apartment.id && styles.apartmentPickerTextSelected
+                          ]}>
+                            {apartment.blockName} - Daire {apartment.unitNumber}
+                          </Text>
+                          {apartment.residents && apartment.residents.length > 0 && (
+                            <Text style={[
+                              styles.apartmentPickerSubtext,
+                              assignmentApartmentId === apartment.id && styles.apartmentPickerTextSelected
+                            ]}>
+                              {apartment.residents.length} sakin
+                            </Text>
+                          )}
+                        </View>
+                      </Pressable>
+                    ))
+                  )}
+                </ScrollView>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Atama Tipi</Text>
+                <View style={styles.radioGroup}>
+                  <Pressable
+                    style={[styles.radioButton, assignmentType === 'owner' && styles.radioButtonActive]}
+                    onPress={() => setAssignmentType('owner')}
+                  >
+                    <Text style={[styles.radioText, assignmentType === 'owner' && styles.radioTextActive]}>
+                      Kat Maliki
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.radioButton, assignmentType === 'tenant' && styles.radioButtonActive]}
+                    onPress={() => setAssignmentType('tenant')}
+                  >
+                    <Text style={[styles.radioText, assignmentType === 'tenant' && styles.radioTextActive]}>
+                      Kiracı
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              <Pressable 
+                style={styles.submitButton} 
+                onPress={handleAssignApartment}
+              >
+                <Home size={16} color={colors.white} />
+                <Text style={styles.submitButtonText}>Daireye Ata</Text>
+              </Pressable>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+  }
+
+  // Default return - should not reach here
+  return (
+    <View style={styles.container}>
+      <Text>Bilinmeyen görünüm modu</Text>
     </View>
   );
 };
@@ -898,71 +1286,88 @@ const styles = StyleSheet.create({
   searchIcon: { marginRight: spacing.sm },
   searchInput: { flex: 1, height: 40, fontSize: fontSize.inputText, color: colors.textPrimary },
   addButton: { 
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.md,
+    width: 40, 
     height: 40, 
     backgroundColor: colors.primary, 
     borderRadius: borderRadius.button, 
+    alignItems: 'center', 
     justifyContent: 'center' 
   },
-  actionButtonText: {
-    fontSize: fontSize.cardMeta,
-    fontWeight: fontWeight.semibold,
-    color: colors.white,
-  },
   
-  residentsList: { gap: spacing.sm },
+  residentsList: { gap: spacing.md },
   residentCard: { 
     backgroundColor: colors.white, 
     borderRadius: borderRadius.card, 
-    padding: spacing.md, 
+    padding: spacing.lg, 
     borderWidth: 1, 
     borderColor: colors.border 
   },
-  residentHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  residentHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, marginBottom: spacing.md },
   avatar: { 
-    width: 48, 
-    height: 48, 
-    borderRadius: borderRadius.full, 
+    width: 64, 
+    height: 64, 
+    borderRadius: 32, 
     backgroundColor: colors.primaryLight, 
     alignItems: 'center', 
     justifyContent: 'center', 
     borderWidth: 2, 
     borderColor: colors.primary + '20' 
   },
-  avatarText: { fontSize: fontSize.cardTitle, fontWeight: fontWeight.semibold, color: colors.primary },
-  residentInfo: { flex: 1 },
-  residentNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  residentName: { fontSize: fontSize.cardTitle, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  badgeRow: { flexDirection: 'row', gap: spacing.xs, marginTop: 4 },
-  badge: { paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: borderRadius.sm },
-  badgePrimary: { backgroundColor: colors.primary },
-  badgeSecondary: { backgroundColor: colors.gray200 },
-  badgeText: { fontSize: 10, fontWeight: fontWeight.semibold },
-  badgeTextPrimary: { color: colors.white },
-  badgeTextSecondary: { color: colors.textSecondary },
-  apartmentInfo: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: spacing.sm },
-  apartmentText: { fontSize: fontSize.cardMeta, color: colors.textSecondary },
-  contactInfo: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  contactText: { fontSize: fontSize.cardMeta, color: colors.textSecondary },
-  menuButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  
-  actionMenu: { 
-    marginTop: spacing.md, 
-    paddingTop: spacing.md, 
-    borderTopWidth: 1, 
-    borderTopColor: colors.border,
-    gap: spacing.sm,
+  avatarText: { fontSize: 20, fontWeight: fontWeight.bold, color: colors.primary },
+  residentInfo: { flex: 1, gap: 6 },
+  residentName: { fontSize: fontSize.cardTitle, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: 4 },
+  roleBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.sm,
   },
-  actionMenuItem: { 
+  roleBadgeOwner: {
+    backgroundColor: colors.primary,
+  },
+  roleBadgeTenant: {
+    backgroundColor: colors.info,
+  },
+  roleBadgeText: {
+    fontSize: 12,
+    fontWeight: fontWeight.semibold,
+    color: colors.white,
+  },
+  contactInfo: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  contactText: { fontSize: fontSize.cardMeta, color: colors.textSecondary },
+  
+  actionButtons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  actionButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm 
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.button,
+    minHeight: 44, // Minimum touch target size
   },
-  actionMenuText: { fontSize: fontSize.cardSubtitle, color: colors.textPrimary },
+  actionButtonEdit: {
+    backgroundColor: colors.primary,
+  },
+  actionButtonAdd: {
+    backgroundColor: colors.success,
+  },
+  actionButtonRemove: {
+    backgroundColor: colors.error,
+  },
+  actionButtonText: {
+    fontSize: fontSize.cardMeta,
+    fontWeight: fontWeight.semibold,
+    color: colors.white,
+  },
   
   emptyState: { alignItems: 'center', paddingVertical: spacing['3xl'] },
   emptyText: { fontSize: fontSize.cardSubtitle, color: colors.textSecondary, marginTop: spacing.md },
@@ -973,12 +1378,16 @@ const styles = StyleSheet.create({
     left: spacing.screenPaddingHorizontal, 
     right: spacing.screenPaddingHorizontal 
   },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
   floatingButton: { 
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.primary, 
     padding: spacing.lg, 
     borderRadius: borderRadius.button,
     shadowColor: '#000',
@@ -986,6 +1395,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  floatingButtonPrimary: {
+    backgroundColor: colors.primary,
+  },
+  floatingButtonDanger: {
+    backgroundColor: colors.error,
   },
   floatingButtonText: { 
     fontSize: fontSize.buttonText, 
@@ -1005,47 +1420,34 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white, 
     borderTopLeftRadius: borderRadius.cardLg, 
     borderTopRightRadius: borderRadius.cardLg, 
-    maxHeight: '80%' 
+    maxHeight: '90%' 
   },
   modalHeader: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center', 
-    padding: spacing.lg, 
+    padding: spacing.xl, 
     borderBottomWidth: 1, 
     borderBottomColor: colors.border 
   },
-  modalTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  modalScroll: { padding: spacing.lg, paddingBottom: spacing['2xl'] },
+  modalTitle: { fontSize: fontSize['2xl'], fontWeight: fontWeight.bold, color: colors.textPrimary },
+  modalScroll: { padding: spacing.xl },
   
-  formGroup: { marginBottom: spacing.md },
-  label: { fontSize: fontSize.cardSubtitle, fontWeight: fontWeight.medium, color: colors.textPrimary, marginBottom: spacing.xs },
+  formGroup: { marginBottom: spacing.lg },
+  label: { fontSize: fontSize.cardSubtitle, fontWeight: fontWeight.medium, color: colors.textPrimary, marginBottom: spacing.sm },
   input: { 
     borderWidth: 1, 
     borderColor: colors.border, 
     borderRadius: borderRadius.input, 
     paddingHorizontal: spacing.md, 
-    paddingVertical: spacing.sm, 
+    paddingVertical: spacing.md, 
     fontSize: fontSize.inputText, 
     color: colors.textPrimary 
   },
-  roleGroup: { flexDirection: 'row', gap: spacing.xs },
-  roleButton: { 
-    flex: 1, 
-    paddingVertical: spacing.sm, 
-    borderRadius: borderRadius.button, 
-    borderWidth: 1, 
-    borderColor: colors.border, 
-    alignItems: 'center', 
-    backgroundColor: colors.white 
-  },
-  roleButtonActive: { backgroundColor: colors.success, borderColor: colors.success },
-  roleText: { fontSize: fontSize.cardMeta, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  roleTextActive: { color: colors.white },
-  radioGroup: { flexDirection: 'row', gap: spacing.xs },
+  radioGroup: { flexDirection: 'row', gap: spacing.sm },
   radioButton: { 
     flex: 1, 
-    paddingVertical: spacing.sm, 
+    paddingVertical: spacing.md, 
     borderRadius: borderRadius.button, 
     borderWidth: 1, 
     borderColor: colors.border, 
@@ -1053,47 +1455,134 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white 
   },
   radioButtonActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  radioText: { fontSize: fontSize.cardMeta, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  radioText: { fontSize: fontSize.cardTitle, fontWeight: fontWeight.medium, color: colors.textPrimary },
   radioTextActive: { color: colors.white },
-  disabledInput: {
-    backgroundColor: colors.gray100,
-    color: colors.gray500,
-  },
-  apartmentList: {
-    maxHeight: 200,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.input,
-    marginTop: spacing.xs,
-  },
-  apartmentItem: {
-    padding: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  apartmentItemSelected: {
-    backgroundColor: colors.primaryLight,
-  },
-  apartmentItemText: {
-    fontSize: fontSize.cardSubtitle,
-    color: colors.textPrimary,
-  },
-  apartmentItemTextSelected: {
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
-  },
   submitButton: { 
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
     backgroundColor: colors.primary, 
-    padding: spacing.md, 
+    padding: spacing.lg, 
     borderRadius: borderRadius.button, 
-    marginTop: spacing.lg,
-    marginBottom: spacing.md
+    marginTop: spacing.md 
+  },
+  submitButtonDanger: {
+    backgroundColor: colors.error,
   },
   submitButtonText: { fontSize: fontSize.buttonText, fontWeight: fontWeight.semibold, color: colors.white },
+  
+  selectedResidentText: {
+    fontSize: fontSize.cardTitle,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
+    padding: spacing.md,
+    backgroundColor: colors.primaryLight,
+    borderRadius: borderRadius.input,
+  },
+  apartmentPicker: {
+    maxHeight: 200,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.input,
+    padding: spacing.sm,
+  },
+  apartmentPickerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.xs,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  apartmentPickerItemSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  apartmentPickerText: {
+    fontSize: fontSize.cardTitle,
+    color: colors.textPrimary,
+    fontWeight: fontWeight.medium,
+  },
+  apartmentPickerTextSelected: {
+    color: colors.white,
+  },
+  apartmentPickerSubtext: {
+    fontSize: fontSize.cardMeta,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  emptyPickerText: {
+    fontSize: fontSize.cardSubtitle,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    padding: spacing.md,
+  },
+  blockPicker: {
+    maxHeight: 200,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.input,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  blockPickerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.xs,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  blockPickerItemSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  blockPickerText: {
+    fontSize: fontSize.cardTitle,
+    color: colors.textPrimary,
+    fontWeight: fontWeight.medium,
+  },
+  blockPickerTextSelected: {
+    color: colors.white,
+  },
+  
+  // Apartments Grid Styles
+  apartmentsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    justifyContent: 'space-between',
+  },
+  apartmentGridCard: {
+    width: '48%',
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.card,
+    padding: spacing.lg,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    minHeight: 120,
+  },
+  apartmentIcon: {
+    marginBottom: spacing.sm,
+  },
+  apartmentGridNumber: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
+    marginBottom: spacing.xs,
+  },
+  apartmentGridResidents: {
+    fontSize: fontSize.cardMeta,
+    color: colors.textSecondary,
+  },
 });
 
 export default AdminResidents;

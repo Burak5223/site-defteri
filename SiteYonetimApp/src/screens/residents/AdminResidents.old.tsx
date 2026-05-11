@@ -89,8 +89,13 @@ const AdminResidents = () => {
       return;
     }
 
+    if (!user?.siteId) {
+      Alert.alert('Hata', 'Site bilgisi bulunamadı');
+      return;
+    }
+
     try {
-      await residentService.inviteResident(formData);
+      await residentService.inviteResident(formData, user.siteId);
       Alert.alert('Başarılı', 'Davet gönderildi');
       setShowAddModal(false);
       resetForm();

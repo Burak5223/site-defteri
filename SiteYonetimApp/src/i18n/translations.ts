@@ -110,6 +110,9 @@ export const translations = {
       recentAnnouncementsTitle: 'Son Duyurular',
       activeTicketsTitle: 'Aktif Arızalar',
       noActiveTickets: 'Aktif arıza yok',
+      myApartments: 'Dairelerim',
+      switchApartment: 'Daire Değiştir',
+      currentApartment: 'Aktif Daire',
     },
     
     // Finance

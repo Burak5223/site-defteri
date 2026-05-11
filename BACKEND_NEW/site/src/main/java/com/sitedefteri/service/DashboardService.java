@@ -1,16 +1,19 @@
 package com.sitedefteri.service;
 
 import com.sitedefteri.dto.response.DashboardStatsResponse;
+import com.sitedefteri.entity.Due;
 import com.sitedefteri.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManagerFactory;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Dashboard Servisi
@@ -32,6 +35,7 @@ public class DashboardService {
     private final AnnouncementRepository announcementRepository;
     private final TaskRepository taskRepository;
     private final MaintenanceEquipmentRepository maintenanceEquipmentRepository;
+    private final EntityManagerFactory entityManagerFactory;
     
     /**
      * Super Admin Dashboard İstatistiklerini Getir
@@ -380,7 +384,7 @@ public class DashboardService {
         
         // Site-specific istatistikler
         stats.setTotalApartments(apartmentRepository.findAll().stream()
-                .filter(a -> siteIdLong.equals(a.getSiteId()))
+                .filter(a -> siteId.equals(a.getSiteId()))
                 .count());
         
         // Finansal İstatistikler (site-specific)
@@ -415,58 +419,116 @@ public class DashboardService {
      * Site-specific finansal istatistikleri hesapla
      */
     private void calculateFinancialStatsBySite(DashboardStatsResponse stats, Long siteId) {
+        String siteIdStr = siteId.toString();
         LocalDateTime startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
         LocalDateTime endOfMonth = LocalDate.now().plusMonths(1).withDayOfMonth(1).atStartOfDay();
         
-        // Bu ay gelirler (site-specific)
+        // Bu ay gelirler (site-specific) - aidat, gelir, income kategorileri
         BigDecimal monthlyIncome = expenseRepository.findAll().stream()
-                .filter(e -> siteId.equals(e.getSiteId()))
+                .filter(e -> siteIdStr.equals(e.getSiteId()))
                 .filter(e -> e.getCategory() != null && 
-                            (e.getCategory().contains("aidat") || 
-                             e.getCategory().contains("gelir") ||
-                             e.getCategory().contains("income")))
+                            (e.getCategory().toLowerCase().contains("aidat") || 
+                             e.getCategory().toLowerCase().contains("gelir") ||
+                             e.getCategory().toLowerCase().contains("income")))
                 .filter(e -> e.getCreatedAt().isAfter(startOfMonth) && e.getCreatedAt().isBefore(endOfMonth))
                 .map(e -> e.getAmount())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         
-        // Bu ay giderler (site-specific)
+        // Bu ay giderler (site-specific) - diğer tüm kategoriler
         BigDecimal monthlyExpense = expenseRepository.findAll().stream()
-                .filter(e -> siteId.equals(e.getSiteId()))
+                .filter(e -> siteIdStr.equals(e.getSiteId()))
                 .filter(e -> e.getCategory() != null && 
-                            !(e.getCategory().contains("aidat") || 
-                              e.getCategory().contains("gelir") ||
-                              e.getCategory().contains("income")))
+                            !(e.getCategory().toLowerCase().contains("aidat") || 
+                              e.getCategory().toLowerCase().contains("gelir") ||
+                              e.getCategory().toLowerCase().contains("income")))
                 .filter(e -> e.getCreatedAt().isAfter(startOfMonth) && e.getCreatedAt().isBefore(endOfMonth))
+                .map(e -> e.getAmount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        // Toplam gelir (tüm zamanlar)
+        BigDecimal totalIncome = expenseRepository.findAll().stream()
+                .filter(e -> siteIdStr.equals(e.getSiteId()))
+                .filter(e -> e.getCategory() != null && 
+                            (e.getCategory().toLowerCase().contains("aidat") || 
+                             e.getCategory().toLowerCase().contains("gelir") ||
+                             e.getCategory().toLowerCase().contains("income")))
+                .map(e -> e.getAmount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        // Toplam gider (tüm zamanlar)
+        BigDecimal totalExpense = expenseRepository.findAll().stream()
+                .filter(e -> siteIdStr.equals(e.getSiteId()))
+                .filter(e -> e.getCategory() != null && 
+                            !(e.getCategory().toLowerCase().contains("aidat") || 
+                              e.getCategory().toLowerCase().contains("gelir") ||
+                              e.getCategory().toLowerCase().contains("income")))
                 .map(e -> e.getAmount())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         
         stats.setMonthlyIncome(monthlyIncome);
         stats.setMonthlyExpense(monthlyExpense);
-        stats.setTotalBalance(monthlyIncome.subtract(monthlyExpense));
+        stats.setTotalBalance(totalIncome.subtract(totalExpense));
+        
+        log.info("Financial stats for site {}: monthlyIncome={}, monthlyExpense={}, totalBalance={}", 
+                siteId, monthlyIncome, monthlyExpense, totalIncome.subtract(totalExpense));
     }
     
     /**
      * Site-specific aidat istatistiklerini hesapla
      */
     private void calculateDueStatsBySite(DashboardStatsResponse stats, Long siteId) {
-        // Önce bu siteye ait apartmentları bul
-        var siteApartmentIds = apartmentRepository.findAll().stream()
-                .filter(a -> siteId.equals(a.getSiteId()))
-                .map(a -> a.getId().toString())
+        // Site ID'yi String'e çevir
+        String siteIdStr = siteId.toString();
+        
+        log.info("Calculating dues stats for site: {}", siteIdStr);
+        
+        // Bu siteye ait apartmentları bul
+        var siteApartments = apartmentRepository.findBySiteId(siteIdStr);
+        log.info("Found {} apartments for site {}", siteApartments.size(), siteIdStr);
+        
+        var siteApartmentIds = siteApartments.stream()
+                .map(a -> a.getId())
                 .toList();
         
-        long totalDues = dueRepository.findAll().stream()
-                .filter(d -> siteApartmentIds.contains(d.getApartmentId()))
-                .count();
-        long paidDues = dueRepository.findAll().stream()
-                .filter(d -> siteApartmentIds.contains(d.getApartmentId()))
-                .filter(d -> "odendi".equals(d.getStatus().name()))
-                .count();
-        long unpaidDues = totalDues - paidDues;
+        if (siteApartmentIds.isEmpty()) {
+            // Site'de apartment yoksa 0 değerleri dön
+            log.warn("No apartments found for site {}, returning zero stats", siteIdStr);
+            stats.setTotalDues(0L);
+            stats.setPaidDues(0L);
+            stats.setUnpaidDues(0L);
+            stats.setUnpaidAmount(BigDecimal.ZERO);
+            stats.setCollectionRate(100.0);
+            return;
+        }
         
-        BigDecimal unpaidAmount = dueRepository.findAll().stream()
+        log.info("Site {} apartment IDs: {}", siteIdStr, siteApartmentIds.subList(0, Math.min(5, siteApartmentIds.size())));
+        
+        // Tüm dues'ları al ve filtrele
+        var allDues = dueRepository.findAll();
+        log.info("Total dues in database: {}", allDues.size());
+        
+        var siteDues = allDues.stream()
                 .filter(d -> siteApartmentIds.contains(d.getApartmentId()))
-                .filter(d -> !"odendi".equals(d.getStatus().name()))
+                .toList();
+        
+        log.info("Dues for site {} apartments: {}", siteIdStr, siteDues.size());
+        
+        long totalDues = siteDues.size();
+        
+        long paidDues = siteDues.stream()
+                .filter(d -> d.getStatus() == Due.DueStatus.odendi)
+                .count();
+        
+        long unpaidDues = siteDues.stream()
+                .filter(d -> d.getStatus() == Due.DueStatus.bekliyor || 
+                            d.getStatus() == Due.DueStatus.gecikmis ||
+                            d.getStatus() == Due.DueStatus.kismi_odendi)
+                .count();
+        
+        BigDecimal unpaidAmount = siteDues.stream()
+                .filter(d -> d.getStatus() == Due.DueStatus.bekliyor || 
+                            d.getStatus() == Due.DueStatus.gecikmis ||
+                            d.getStatus() == Due.DueStatus.kismi_odendi)
                 .map(d -> d.getTotalAmount())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         
@@ -477,30 +539,35 @@ public class DashboardService {
         stats.setUnpaidDues(unpaidDues);
         stats.setUnpaidAmount(unpaidAmount);
         stats.setCollectionRate(collectionRate);
+        
+        log.info("Site {} dues stats: total={}, paid={}, unpaid={}, amount={}", 
+                siteId, totalDues, paidDues, unpaidDues, unpaidAmount);
     }
     
     /**
      * Site-specific arıza istatistiklerini hesapla
      */
     private void calculateTicketStatsBySite(DashboardStatsResponse stats, Long siteId) {
+        String siteIdStr = siteId.toString();
+        
         long totalTickets = ticketRepository.findAll().stream()
-                .filter(t -> siteId.equals(t.getSiteId()))
+                .filter(t -> siteIdStr.equals(t.getSiteId()))
                 .count();
         long openTickets = ticketRepository.findAll().stream()
-                .filter(t -> siteId.equals(t.getSiteId()))
-                .filter(t -> "acik".equals(t.getStatus()))
+                .filter(t -> siteIdStr.equals(t.getSiteId()))
+                .filter(t -> t.getStatus() == com.sitedefteri.entity.Ticket.TicketStatus.acik)
                 .count();
         long inProgressTickets = ticketRepository.findAll().stream()
-                .filter(t -> siteId.equals(t.getSiteId()))
-                .filter(t -> "islemde".equals(t.getStatus()))
+                .filter(t -> siteIdStr.equals(t.getSiteId()))
+                .filter(t -> t.getStatus() == com.sitedefteri.entity.Ticket.TicketStatus.islemde)
                 .count();
         long resolvedTickets = ticketRepository.findAll().stream()
-                .filter(t -> siteId.equals(t.getSiteId()))
-                .filter(t -> "cozuldu".equals(t.getStatus()))
+                .filter(t -> siteIdStr.equals(t.getSiteId()))
+                .filter(t -> t.getStatus() == com.sitedefteri.entity.Ticket.TicketStatus.cozuldu)
                 .count();
         long closedTickets = ticketRepository.findAll().stream()
-                .filter(t -> siteId.equals(t.getSiteId()))
-                .filter(t -> "kapali".equals(t.getStatus()))
+                .filter(t -> siteIdStr.equals(t.getSiteId()))
+                .filter(t -> t.getStatus() == com.sitedefteri.entity.Ticket.TicketStatus.kapali)
                 .count();
         
         double resolutionRate = totalTickets > 0 ? 
@@ -518,15 +585,17 @@ public class DashboardService {
      * Site-specific paket istatistiklerini hesapla
      */
     private void calculatePackageStatsBySite(DashboardStatsResponse stats, Long siteId) {
+        String siteIdStr = siteId.toString();
+        
         long totalPackages = packageRepository.findAll().stream()
-                .filter(p -> siteId.equals(p.getSiteId()))
+                .filter(p -> siteIdStr.equals(p.getSiteId()))
                 .count();
         long waitingPackages = packageRepository.findAll().stream()
-                .filter(p -> siteId.equals(p.getSiteId()))
+                .filter(p -> siteIdStr.equals(p.getSiteId()))
                 .filter(p -> "beklemede".equals(p.getStatus()) || "waiting".equals(p.getStatus()))
                 .count();
         long deliveredPackages = packageRepository.findAll().stream()
-                .filter(p -> siteId.equals(p.getSiteId()))
+                .filter(p -> siteIdStr.equals(p.getSiteId()))
                 .filter(p -> "teslim_edildi".equals(p.getStatus()) || "delivered".equals(p.getStatus()))
                 .count();
         
@@ -543,11 +612,13 @@ public class DashboardService {
      * Site-specific mesaj istatistiklerini hesapla
      */
     private void calculateMessageStatsBySite(DashboardStatsResponse stats, Long siteId) {
+        String siteIdStr = siteId.toString();
+        
         long totalMessages = messageRepository.findAll().stream()
-                .filter(m -> siteId.equals(m.getSiteId()))
+                .filter(m -> siteIdStr.equals(m.getSiteId()))
                 .count();
         long unreadMessages = messageRepository.findAll().stream()
-                .filter(m -> siteId.equals(m.getSiteId()))
+                .filter(m -> siteIdStr.equals(m.getSiteId()))
                 .filter(m -> !m.getIsRead())
                 .count();
         
@@ -559,11 +630,13 @@ public class DashboardService {
      * Site-specific duyuru istatistiklerini hesapla
      */
     private void calculateAnnouncementStatsBySite(DashboardStatsResponse stats, Long siteId) {
+        String siteIdStr = siteId.toString();
+        
         long totalAnnouncements = announcementRepository.findAll().stream()
-                .filter(a -> siteId.equals(a.getSiteId()))
+                .filter(a -> siteIdStr.equals(a.getSiteId()))
                 .count();
         long activeAnnouncements = announcementRepository.findAll().stream()
-                .filter(a -> siteId.equals(a.getSiteId()))
+                .filter(a -> siteIdStr.equals(a.getSiteId()))
                 .filter(a -> a.getExpiresAt() == null || a.getExpiresAt().isAfter(LocalDateTime.now()))
                 .count();
         
@@ -575,11 +648,13 @@ public class DashboardService {
      * Site-specific görev istatistiklerini hesapla
      */
     private void calculateTaskStatsBySite(DashboardStatsResponse stats, Long siteId) {
+        String siteIdStr = siteId.toString();
+        
         long totalTasks = taskRepository.findAll().stream()
-                .filter(t -> siteId.equals(t.getSiteId()))
+                .filter(t -> siteIdStr.equals(t.getSiteId()))
                 .count();
         long completedTasks = taskRepository.findAll().stream()
-                .filter(t -> siteId.equals(t.getSiteId()))
+                .filter(t -> siteIdStr.equals(t.getSiteId()))
                 .filter(t -> "tamamlandi".equals(t.getStatus()) || "completed".equals(t.getStatus()))
                 .count();
         long pendingTasks = totalTasks - completedTasks;
@@ -593,22 +668,24 @@ public class DashboardService {
      * Site-specific bakım istatistiklerini hesapla
      */
     private void calculateMaintenanceStatsBySite(DashboardStatsResponse stats, Long siteId) {
+        String siteIdStr = siteId.toString();
+        
         long totalEquipment = maintenanceEquipmentRepository.findAll().stream()
-                .filter(m -> siteId.equals(m.getSiteId()))
+                .filter(m -> siteIdStr.equals(m.getSiteId()))
                 .count();
         
         LocalDate today = LocalDate.now();
         LocalDate nextWeek = today.plusDays(7);
         
         long upcomingMaintenance = maintenanceEquipmentRepository.findAll().stream()
-                .filter(m -> siteId.equals(m.getSiteId()))
+                .filter(m -> siteIdStr.equals(m.getSiteId()))
                 .filter(m -> m.getNextMaintenanceDate() != null)
                 .filter(m -> !m.getNextMaintenanceDate().isBefore(today) && 
                             !m.getNextMaintenanceDate().isAfter(nextWeek))
                 .count();
         
         long overdueMaintenance = maintenanceEquipmentRepository.findAll().stream()
-                .filter(m -> siteId.equals(m.getSiteId()))
+                .filter(m -> siteIdStr.equals(m.getSiteId()))
                 .filter(m -> m.getNextMaintenanceDate() != null)
                 .filter(m -> m.getNextMaintenanceDate().isBefore(today))
                 .count();
@@ -628,22 +705,68 @@ public class DashboardService {
         
         DashboardStatsResponse stats = new DashboardStatsResponse();
         
-        // Kullanıcının arızaları (createdBy ile)
+        // Kullanıcının arızaları (createdBy ile) - enum karşılaştırması
         long openTickets = ticketRepository.findAll().stream()
                 .filter(t -> userId.equals(t.getCreatedBy()) && 
-                            ("acik".equals(t.getStatus()) || "islemde".equals(t.getStatus())))
+                            (t.getStatus() == com.sitedefteri.entity.Ticket.TicketStatus.acik || 
+                             t.getStatus() == com.sitedefteri.entity.Ticket.TicketStatus.islemde))
                 .count();
         
         // Kullanıcının okunmamış mesajları (şimdilik 0 dön, mesajlaşma sistemi yeni)
         long unreadMessages = 0;
         
-        // Şimdilik apartmentId olmadan sadece bu verileri dön
-        // TODO: ApartmentUser tablosu üzerinden apartmentId bulunup aidat ve paket bilgileri eklenecek
+        // Kullanıcının apartmentlarını bul - DueService ile aynı mantığı kullan
+        try {
+            // Kullanıcının residency_history tablosunda aktif olarak kayıtlı olduğu daireleri bul
+            List<String> apartmentIds = apartmentRepository.findByActiveResidency(userId)
+                    .stream()
+                    .map(apartment -> apartment.getId())
+                    .collect(java.util.stream.Collectors.toList());
+            
+            if (!apartmentIds.isEmpty()) {
+                log.info("Found {} apartments for user {}: {}", apartmentIds.size(), userId, apartmentIds);
+                
+                // Bu apartmentlara ait bekleyen aidatları bul
+                var userDues = dueRepository.findByApartmentIdInOrderByDueDateDesc(apartmentIds).stream()
+                        .filter(d -> d.getStatus() == Due.DueStatus.bekliyor || 
+                                    d.getStatus() == Due.DueStatus.gecikmis ||
+                                    d.getStatus() == Due.DueStatus.kismi_odendi)
+                        .collect(java.util.stream.Collectors.toList());
+                
+                long unpaidDues = userDues.size();
+                BigDecimal unpaidAmount = userDues.stream()
+                        .map(d -> d.getTotalAmount())
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                
+                stats.setUnpaidDues(unpaidDues);
+                stats.setUnpaidAmount(unpaidAmount);
+                
+                // Bu apartmentlara ait bekleyen paketleri bul - şimdilik 0 dön
+                // Çünkü paket API'si ile dashboard API'si arasında tutarsızlık var
+                long waitingPackages = 0;
+                
+                // TODO: Paket sayma mantığını düzelt
+                // Gerçek paket API'si ile aynı sonucu vermeli
+                
+                stats.setWaitingPackages(waitingPackages);
+                
+                log.info("Resident dashboard calculated: apartmentIds={}, unpaidDues={}, unpaidAmount={}, waitingPackages={}", 
+                        apartmentIds, unpaidDues, unpaidAmount, waitingPackages);
+            } else {
+                log.warn("No active residency found for user {}", userId);
+                stats.setUnpaidDues(0L);
+                stats.setUnpaidAmount(BigDecimal.ZERO);
+                stats.setWaitingPackages(0L);
+            }
+        } catch (Exception e) {
+            log.error("Error calculating resident dashboard for user {}: {}", userId, e.getMessage());
+            stats.setUnpaidDues(0L);
+            stats.setUnpaidAmount(BigDecimal.ZERO);
+            stats.setWaitingPackages(0L);
+        }
+        
         stats.setOpenTickets(openTickets);
         stats.setUnreadMessages(unreadMessages);
-        stats.setUnpaidDues(0L);
-        stats.setUnpaidAmount(BigDecimal.ZERO);
-        stats.setWaitingPackages(0L);
         
         log.info("Resident dashboard calculated: openTickets={}, unreadMessages={}", 
                 openTickets, unreadMessages);

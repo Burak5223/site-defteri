@@ -1,0 +1,30 @@
+Sunucuda şu komutları çalıştır:
+
+1. Backend'i başlat:
+cd ~/BACKEND_NEW/site
+nohup java -Dserver.address=0.0.0.0 -jar target/site-backend-1.0.0.jar > logs/backend.log 2>&1 &
+
+2. Durumu kontrol et:
+ps aux | grep java
+ss -tlnp | grep 8080
+curl http://localhost:8080/api/test
+
+3. Eğer çalışmıyorsa restart script'ini kullan:
+~/SUNUCU_BACKEND_RESTART.sh
+
+4. Mobil uygulamayı test et:
+- Sakinler ekranında blok filtreleme
+- Mesajlar ekranında "Blok Blok Görüntüle" butonu
+- Her blokta dairelerin gruplandırılması
+
+ÖZELLİKLER:
+✅ Sakinler ekranında:
+  - Blok arama filtresi
+  - Sakin tipi filtresi (Tümü/Malik/Kiracı)
+  - Gelişmiş arama (isim, email, telefon, daire no)
+
+✅ Mesajlar ekranında:
+  - Tüm roller için "Blok Blok Görüntüle" butonu
+  - Blok bazlı daire gruplandırması
+  - Her blokta daire listesi
+  - Arama ve filtreleme

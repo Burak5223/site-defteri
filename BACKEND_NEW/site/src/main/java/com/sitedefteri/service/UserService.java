@@ -11,6 +11,7 @@ import com.sitedefteri.entity.UserSiteMembership;
 import com.sitedefteri.exception.BadRequestException;
 import com.sitedefteri.exception.ResourceNotFoundException;
 import com.sitedefteri.repository.ApartmentRepository;
+import com.sitedefteri.repository.BlockRepository;
 import com.sitedefteri.repository.SiteRepository;
 import com.sitedefteri.repository.UserRepository;
 import com.sitedefteri.repository.UserSiteMembershipRepository;
@@ -19,9 +20,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import java.util.List;
 import java.util.UUID;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,10 +38,14 @@ public class UserService {
     
     private final UserRepository userRepository;
     private final ApartmentRepository apartmentRepository;
+    private final BlockRepository blockRepository;
     private final UserSiteMembershipRepository membershipRepository;
     private final SiteRepository siteRepository;
     private final PasswordEncoder passwordEncoder;
     private final SmsService smsService;
+    
+    @PersistenceContext
+    private EntityManager entityManager;
     
     /**
      * Get all users for a site
@@ -84,28 +95,86 @@ public class UserService {
         
         log.info("User {} belongs to sites: {}", currentUserId, userSiteIds);
         
-        // Get all memberships for these sites
-        List<UserSiteMembership> siteMemberships = membershipRepository.findBySiteIdIn(userSiteIds);
+        // Get all apartments for these sites
+        List<Apartment> siteApartments = apartmentRepository.findBySiteIdIn(userSiteIds);
         
-        // Get unique user IDs from these memberships (excluding current user)
-        List<String> siteUserIds = siteMemberships.stream()
+        // Get all user IDs that are assigned to apartments (either as resident or owner)
+        Set<String> apartmentUserIds = new HashSet<>();
+        for (Apartment apt : siteApartments) {
+            if (apt.getCurrentResidentId() != null) {
+                apartmentUserIds.add(apt.getCurrentResidentId());
+            }
+            if (apt.getOwnerUserId() != null) {
+                apartmentUserIds.add(apt.getOwnerUserId());
+            }
+        }
+        
+        // Also get all staff users (ADMIN, SECURITY, CLEANING) from the same sites
+        List<UserSiteMembership> staffMemberships = membershipRepository.findBySiteIdIn(userSiteIds);
+        Set<String> staffUserIds = staffMemberships.stream()
+                .filter(m -> {
+                    String roleType = m.getRoleType();
+                    return "ROLE_ADMIN".equals(roleType) || 
+                           "ROLE_SECURITY".equals(roleType) || 
+                           "ROLE_CLEANING".equals(roleType) ||
+                           "ADMIN".equals(roleType) ||
+                           "SECURITY".equals(roleType) ||
+                           "CLEANING".equals(roleType) ||
+                           "personel".equals(roleType) || 
+                           "yonetici".equals(roleType);
+                })
                 .map(m -> m.getUser().getId())
-                .filter(id -> !id.equals(currentUserId))
-                .distinct()
-                .collect(Collectors.toList());
+                .collect(Collectors.toSet());
         
-        log.info("Found {} users in the same sites", siteUserIds.size());
+        log.info("Found {} staff users in the same sites", staffUserIds.size());
         
-        // Fetch users and map to response
-        return userRepository.findAllById(siteUserIds).stream()
-                .map(user -> {
+        // Combine apartment users and staff users
+        Set<String> allUserIds = new HashSet<>();
+        allUserIds.addAll(apartmentUserIds);
+        allUserIds.addAll(staffUserIds);
+        
+        // Remove current user from the list
+        allUserIds.remove(currentUserId);
+        
+        log.info("Total users to return: {} (apartment: {}, staff: {})", 
+                allUserIds.size(), apartmentUserIds.size(), staffUserIds.size());
+        
+        // Fetch users and map to response with apartment info
+        // For users with multiple apartments, create separate entries for each apartment
+        List<UserResponse> responses = new ArrayList<>();
+        List<User> users = userRepository.findAllById(allUserIds);
+        
+        for (User user : users) {
+            List<Apartment> userApartments = siteApartments.stream()
+                    .filter(apt -> user.getId().equals(apt.getOwnerUserId()) || user.getId().equals(apt.getCurrentResidentId()))
+                    .collect(Collectors.toList());
+            
+            if (userApartments.isEmpty()) {
+                // User has no apartments (staff member), show without apartment info
+                UserResponse response = toResponse(user);
+                List<String> roles = userRepository.findRolesByUserId(user.getId());
+                response.setRoles(roles);
+                responses.add(response);
+            } else {
+                // Create separate response for each apartment
+                for (Apartment apt : userApartments) {
                     UserResponse response = toResponse(user);
-                    // Get user roles
+                    response.setBlockName(apt.getBlockName());
+                    response.setUnitNumber(apt.getUnitNumber());
+                    
+                    boolean isOwner = user.getId().equals(apt.getOwnerUserId());
+                    response.setResidentType(isOwner ? "owner" : "tenant");
+                    
                     List<String> roles = userRepository.findRolesByUserId(user.getId());
                     response.setRoles(roles);
-                    return response;
-                })
-                .collect(Collectors.toList());
+                    
+                    responses.add(response);
+                    log.info("User {} added for apartment {} as {}", user.getId(), apt.getUnitNumber(), response.getResidentType());
+                }
+            }
+        }
+        
+        return responses;
     }
     
     /**
@@ -116,6 +185,249 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı", "id", userId));
         return toResponse(user);
+    }
+    
+    /**
+     * Get users by apartment ID with resident type
+     */
+    public List<UserResponse> getUsersByApartment(String apartmentId) {
+        log.info("Fetching users for apartment: {}", apartmentId);
+        
+        // Get apartment info
+        Apartment apartment = apartmentRepository.findById(apartmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Daire", "id", apartmentId));
+        
+        // Get users from residency_history
+        List<User> users = userRepository.findByApartmentId(apartmentId);
+        
+        return users.stream()
+                .map(user -> {
+                    UserResponse response = toResponse(user);
+                    response.setApartmentId(apartmentId);
+                    
+                    // Get is_owner flag from residency_history
+                    Boolean isOwner = userRepository.getIsOwnerByUserAndApartment(user.getId(), apartmentId);
+                    response.setResidentType((isOwner != null && isOwner) ? "owner" : "tenant");
+                    
+                    // Get block name
+                    if (apartment.getBlockId() != null) {
+                        blockRepository.findById(apartment.getBlockId()).ifPresent(block -> {
+                            response.setBlockName(block.getName());
+                        });
+                    }
+                    response.setUnitNumber(apartment.getUnitNumber());
+                    
+                    log.info("User {} ({}) is {} in apartment {} ({})", 
+                        user.getFullName(), user.getId(), response.getResidentType(), 
+                        apartment.getUnitNumber(), apartmentId);
+                    
+                    return response;
+                })
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Create new resident with full profile and apartment assignment
+     */
+    @Transactional
+    public UserResponse createResident(com.sitedefteri.dto.request.CreateResidentRequest request, String createdBy) {
+        log.info("Creating resident: {} for site: {}", request.getEmail(), request.getSiteId());
+        
+        try {
+            // Check if user already exists
+            if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+                throw new BadRequestException("Bu email adresi zaten kullanılıyor");
+            }
+            
+            // Validate site exists
+            Site site = siteRepository.findById(request.getSiteId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Site", "id", request.getSiteId()));
+            
+            // Find or create apartment
+            String apartmentId = findOrCreateApartment(request.getBlockName(), request.getUnitNumber(), request.getSiteId());
+            log.info("Apartment ID for resident: {}", apartmentId);
+            
+            // Create user
+            User user = new User();
+            user.setId(UUID.randomUUID().toString());
+            user.setFullName(request.getFullName());
+            user.setEmail(request.getEmail());
+            user.setPhone(request.getPhone());
+            
+            // Set password
+            String password = request.getPassword() != null && !request.getPassword().trim().isEmpty() 
+                ? request.getPassword() 
+                : generateTempPassword();
+            user.setPasswordHash(passwordEncoder.encode(password));
+            
+            // Set user status and verification
+            user.setStatus(User.UserStatus.aktif); // Active immediately
+            user.setEmailVerified(true); // Verified immediately
+            user.setPhoneVerified(request.getPhone() != null);
+            
+            // Generate user QR token for package collection
+            user.setUserQrToken(UUID.randomUUID().toString());
+            
+            User savedUser = userRepository.save(user);
+            log.info("User created successfully: {}", savedUser.getId());
+            
+            // Create site membership with resident role
+            UserSiteMembership membership = new UserSiteMembership();
+            membership.setId(UUID.randomUUID().toString());
+            membership.setUser(savedUser);
+            membership.setSite(site);
+            membership.setRoleType("RESIDENT"); // Resident role
+            membership.setIsDeleted(false);
+            
+            membershipRepository.save(membership);
+            log.info("Site membership created for user: {} with role: RESIDENT", savedUser.getId());
+            
+            // Assign apartment
+            try {
+                assignApartmentToUser(savedUser.getId(), apartmentId, request.getResidentType());
+                log.info("Apartment assigned successfully");
+            } catch (Exception e) {
+                log.error("Error assigning apartment: {}", e.getMessage());
+                throw new BadRequestException("Daire atama hatası: " + e.getMessage());
+            }
+            
+            // Create residency history record
+            try {
+                createResidencyHistory(savedUser.getId(), apartmentId, "owner".equals(request.getResidentType()));
+                log.info("Residency history created successfully");
+            } catch (Exception e) {
+                log.error("Error creating residency history: {}", e.getMessage());
+                // Don't fail the whole operation for this
+            }
+            
+            log.info("Resident created successfully: {} assigned to apartment: {}", savedUser.getId(), apartmentId);
+            
+            return toResponse(savedUser);
+            
+        } catch (BadRequestException | ResourceNotFoundException e) {
+            log.error("Business logic error in createResident: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error in createResident: {}", e.getMessage(), e);
+            throw new RuntimeException("Sakin oluşturulurken beklenmeyen bir hata oluştu: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Find existing apartment or create new one
+     */
+    private String findOrCreateApartment(String blockName, String unitNumber, String siteId) {
+        log.info("Looking for apartment: blockName={}, unitNumber={}, siteId={}", blockName, unitNumber, siteId);
+        
+        // First try to find existing apartment by site_id and unit_number
+        List<Apartment> existingApartments = apartmentRepository.findBySiteId(siteId);
+        log.info("Found {} apartments in site {}", existingApartments.size(), siteId);
+        
+        for (Apartment apt : existingApartments) {
+            log.info("Checking apartment: id={}, unitNumber={}, blockName={}, siteId={}", 
+                    apt.getId(), apt.getUnitNumber(), apt.getBlockName(), apt.getSiteId());
+            if (apt.getUnitNumber() != null && apt.getUnitNumber().equals(unitNumber)) {
+                log.info("Found existing apartment: {} {} in site: {} (ID: {})", apt.getBlockName(), unitNumber, siteId, apt.getId());
+                return apt.getId();
+            }
+        }
+        
+        // If not found, create new apartment
+        log.info("No existing apartment found, creating new apartment: {} {} in site: {}", blockName, unitNumber, siteId);
+        
+        // Find or create block
+        String blockId = findOrCreateBlock(blockName, siteId);
+        
+        // Create apartment
+        Apartment apartment = new Apartment();
+        apartment.setId(UUID.randomUUID().toString());
+        apartment.setBlockId(blockId);
+        apartment.setBlockName(blockName);
+        apartment.setUnitNumber(unitNumber);
+        apartment.setFloor(calculateFloor(unitNumber));
+        apartment.setStatus(Apartment.ApartmentStatus.dolu);
+        apartment.setSiteId(siteId);
+        
+        try {
+            Apartment savedApartment = apartmentRepository.save(apartment);
+            log.info("New apartment created: {}", savedApartment.getId());
+            return savedApartment.getId();
+        } catch (Exception e) {
+            // If apartment creation fails due to constraint violation, try to find it again
+            log.warn("Apartment creation failed, trying to find existing apartment: {}", e.getMessage());
+            List<Apartment> retryApartments = apartmentRepository.findBySiteId(siteId);
+            for (Apartment apt : retryApartments) {
+                if (apt.getUnitNumber() != null && apt.getUnitNumber().equals(unitNumber)) {
+                    log.info("Found existing apartment after retry: {} {} in site: {} (ID: {})", apt.getBlockName(), unitNumber, siteId, apt.getId());
+                    return apt.getId();
+                }
+            }
+            throw new RuntimeException("Daire bulunamadı ve oluşturulamadı: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Find existing block or create new one
+     */
+    private String findOrCreateBlock(String blockName, String siteId) {
+        // Try to find existing block
+        List<com.sitedefteri.entity.Block> blocks = blockRepository.findAll();
+        for (com.sitedefteri.entity.Block block : blocks) {
+            if (block.getName() != null && block.getName().equals(blockName) && 
+                block.getSiteId() != null && block.getSiteId().equals(siteId)) {
+                log.info("Found existing block: {}", blockName);
+                return block.getId();
+            }
+        }
+        
+        // Create new block
+        log.info("Creating new block: {}", blockName);
+        com.sitedefteri.entity.Block block = new com.sitedefteri.entity.Block();
+        block.setId(UUID.randomUUID().toString());
+        block.setName(blockName);
+        block.setSiteId(siteId);
+        block.setDescription(blockName + " bloku");
+        
+        com.sitedefteri.entity.Block savedBlock = blockRepository.save(block);
+        log.info("New block created: {}", savedBlock.getId());
+        
+        return savedBlock.getId();
+    }
+    
+    /**
+     * Calculate floor from unit number
+     */
+    private Integer calculateFloor(String unitNumber) {
+        try {
+            int unit = Integer.parseInt(unitNumber);
+            // Simple calculation: every 10 units = 1 floor
+            return (unit - 1) / 10 + 1;
+        } catch (NumberFormatException e) {
+            return 1; // Default to ground floor
+        }
+    }
+    
+    /**
+     * Create residency history record
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    private void createResidencyHistory(String userId, String apartmentId, boolean isOwner) {
+        String sql = "INSERT INTO residency_history (id, user_id, apartment_id, move_in_date, is_owner, status, is_deleted) " +
+                    "VALUES (?, ?, ?, NOW(), ?, 'active', false)";
+        
+        try {
+            jakarta.persistence.Query query = entityManager.createNativeQuery(sql);
+            query.setParameter(1, UUID.randomUUID().toString());
+            query.setParameter(2, userId);
+            query.setParameter(3, apartmentId);
+            query.setParameter(4, isOwner);
+            
+            query.executeUpdate();
+            log.info("Residency history created for user: {} in apartment: {}", userId, apartmentId);
+        } catch (Exception e) {
+            log.error("Error creating residency history: {}", e.getMessage());
+            // Don't fail the whole operation for this
+        }
     }
     
     /**
@@ -262,26 +574,31 @@ public class UserService {
      * Helper: Assign apartment to user
      */
     private void assignApartmentToUser(String userId, String apartmentId, String assignmentType) {
+        log.info("Assigning apartment {} to user {} as {}", apartmentId, userId, assignmentType);
+        
         Apartment apartment = apartmentRepository.findById(apartmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Daire", "id", apartmentId));
         
-        // Validate: Check if apartment already has both owner and tenant
+        log.info("Current apartment state - Owner: {}, Current Resident: {}", 
+                apartment.getOwnerUserId(), apartment.getCurrentResidentId());
+        
+        // More flexible assignment logic - allow adding tenants to owner-only apartments and vice versa
         if ("owner".equals(assignmentType)) {
-            if (apartment.getOwnerUserId() != null) {
-                throw new BadRequestException("Bu dairede zaten bir ev sahibi var");
+            if (apartment.getOwnerUserId() != null && !apartment.getOwnerUserId().equals(userId)) {
+                throw new BadRequestException("Bu dairede zaten bir ev sahibi var (ID: " + apartment.getOwnerUserId() + ")");
             }
             apartment.setOwnerUserId(userId);
             apartment.setStatus(Apartment.ApartmentStatus.dolu);
         } else {
-            if (apartment.getCurrentResidentId() != null) {
-                throw new BadRequestException("Bu dairede zaten bir kiracı var");
+            if (apartment.getCurrentResidentId() != null && !apartment.getCurrentResidentId().equals(userId)) {
+                throw new BadRequestException("Bu dairede zaten bir kiracı var (ID: " + apartment.getCurrentResidentId() + ")");
             }
             apartment.setCurrentResidentId(userId);
             apartment.setStatus(Apartment.ApartmentStatus.dolu);
         }
         
         apartmentRepository.save(apartment);
-        log.info("Apartment {} assigned to user {} as {}", apartmentId, userId, assignmentType);
+        log.info("Apartment {} assigned to user {} as {} successfully", apartmentId, userId, assignmentType);
     }
     
     /**
@@ -390,6 +707,30 @@ public class UserService {
     }
     
     /**
+     * Convert entity to response with apartment information
+     */
+    private UserResponse toResponseWithApartment(User user) {
+        UserResponse response = toResponse(user);
+        
+        // Find apartment where user is owner or resident
+        List<Apartment> apartments = apartmentRepository.findAll();
+        for (Apartment apt : apartments) {
+            boolean isOwner = user.getId().equals(apt.getOwnerUserId());
+            boolean isResident = user.getId().equals(apt.getCurrentResidentId());
+            
+            if (isOwner || isResident) {
+                response.setBlockName(apt.getBlockName());
+                response.setUnitNumber(apt.getUnitNumber());
+                response.setResidentType(isOwner ? "owner" : "tenant");
+                log.info("User {} found in apartment {} as {}", user.getId(), apt.getUnitNumber(), response.getResidentType());
+                break; // Kullanıcı sadece bir dairede olabilir
+            }
+        }
+        
+        return response;
+    }
+    
+    /**
      * Save FCM token for push notifications
      */
     @Transactional
@@ -491,5 +832,87 @@ public class UserService {
         log.info("Finding user by QR token");
         return userRepository.findByUserQrToken(qrToken)
                 .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı", "QR token", qrToken));
+    }
+    
+    /**
+     * Get all apartments for a user
+     */
+    public List<java.util.Map<String, Object>> getUserApartments(String userId) {
+        log.info("Fetching apartments for user: {}", userId);
+        
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı", "id", userId));
+        
+        // Query residency_history to get all active apartments for this user
+        String sql = "SELECT a.id, a.unit_number, b.name as block_name, b.id as block_id, " +
+                    "a.floor, rh.is_owner " +
+                    "FROM apartments a " +
+                    "JOIN blocks b ON a.block_id = b.id " +
+                    "JOIN residency_history rh ON a.id = rh.apartment_id " +
+                    "WHERE rh.user_id = :userId AND rh.status = 'active' AND rh.is_deleted = false";
+        
+        List<java.util.Map<String, Object>> results = new java.util.ArrayList<>();
+        
+        try {
+            jakarta.persistence.Query query = entityManager.createNativeQuery(sql);
+            query.setParameter("userId", userId);
+            
+            @SuppressWarnings("unchecked")
+            List<Object[]> rows = query.getResultList();
+            
+            for (Object[] row : rows) {
+                java.util.Map<String, Object> apartmentInfo = new java.util.HashMap<>();
+                apartmentInfo.put("id", row[0]);
+                apartmentInfo.put("unitNumber", row[1]);
+                apartmentInfo.put("blockName", row[2]);
+                apartmentInfo.put("blockId", row[3]);
+                apartmentInfo.put("floor", row[4]);
+                apartmentInfo.put("assignmentType", (Boolean) row[5] ? "OWNER" : "TENANT");
+                results.add(apartmentInfo);
+            }
+        } catch (Exception e) {
+            log.error("Error fetching user apartments: {}", e.getMessage());
+            throw new RuntimeException("Daireler yüklenirken hata oluştu", e);
+        }
+        
+        return results;
+    }
+    
+    /**
+     * Switch user's active apartment
+     * Note: This just verifies access. The frontend will handle the apartment context.
+     */
+    @Transactional
+    public UserResponse switchUserApartment(String userId, String apartmentId) {
+        log.info("Switching apartment for user {} to apartment {}", userId, apartmentId);
+        
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı", "id", userId));
+        
+        Apartment apartment = apartmentRepository.findById(apartmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Daire", "id", apartmentId));
+        
+        // Verify user has access to this apartment through residency_history
+        String checkSql = "SELECT COUNT(*) FROM residency_history " +
+                         "WHERE user_id = :userId AND apartment_id = :apartmentId " +
+                         "AND status = 'active' AND is_deleted = false";
+        
+        jakarta.persistence.Query checkQuery = entityManager.createNativeQuery(checkSql);
+        checkQuery.setParameter("userId", userId);
+        checkQuery.setParameter("apartmentId", apartmentId);
+        
+        Number count = (Number) checkQuery.getSingleResult();
+        
+        if (count.intValue() == 0) {
+            throw new BadRequestException("Bu daireye erişim yetkiniz yok");
+        }
+        
+        log.info("Successfully verified user {} has access to apartment {}", userId, apartmentId);
+        
+        // Return user response with apartment info
+        UserResponse response = toResponse(user);
+        response.setApartmentId(apartmentId);
+        
+        return response;
     }
 }

@@ -21,8 +21,7 @@ public class ResidentNotificationRequest {
     private String apartmentId;
     private String fullName;
 
-    @NotBlank(message = "Kargo şirketi adı zorunludur")
-    private String cargoCompany;
+    private String cargoCompany; // Optional cargo company name
 
     private String expectedDate; // Format: YYYY-MM-DD
     

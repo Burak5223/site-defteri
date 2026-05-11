@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,6 +27,7 @@ public class MessageService {
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
     private final com.sitedefteri.repository.ApartmentRepository apartmentRepository;
+    private final UserService userService;
     
     @PersistenceContext
     private EntityManager entityManager;
@@ -34,10 +36,15 @@ public class MessageService {
     public MessageResponse createMessage(CreateMessageRequest request, String senderId) {
         log.info("Creating message from user: {}, chatType: {}", senderId, request.getChatType());
         
+        // Kullanıcının bu siteye üye olup olmadığını kontrol et
+        if (!isUserMemberOfSite(senderId, request.getSiteId())) {
+            log.error("User {} is not a member of site {}, cannot send message", senderId, request.getSiteId());
+            throw new IllegalArgumentException("Bu siteye mesaj gönderme yetkiniz yok. Lütfen site üyeliğinizi kontrol edin.");
+        }
+        
         Message message = new Message();
         message.setSiteId(request.getSiteId());
         message.setSenderId(senderId);
-        message.setReceiverId(request.getReceiverId());
         
         // ApartmentId'yi belirle
         String apartmentId = request.getApartmentId();
@@ -50,6 +57,30 @@ public class MessageService {
             log.info("Auto-detected apartmentId for user {}: {}", senderId, apartmentId);
         }
         
+        // receiverId'yi ayarla
+        // Eğer receiverId açıkça belirtilmişse (1-1 mesaj), onu kullan
+        // Eğer receiverId null ise ve apartmentId varsa, daire bazlı mesaj (herkes görsün)
+        if (request.getReceiverId() != null) {
+            // 1-1 direct message - receiverId'yi kullan
+            message.setReceiverId(request.getReceiverId());
+            log.info("Direct message - receiverId set to: {}", request.getReceiverId());
+            
+            // Alıcının da site üyesi olup olmadığını kontrol et
+            if (!isUserMemberOfSite(request.getReceiverId(), request.getSiteId())) {
+                log.error("Receiver {} is not a member of site {}, cannot send message", 
+                         request.getReceiverId(), request.getSiteId());
+                throw new IllegalArgumentException("Mesaj göndermek istediğiniz kullanıcı bu sitenin üyesi değil.");
+            }
+        } else if ("apartment".equals(request.getChatType()) && apartmentId != null) {
+            // Daire bazlı mesaj - receiverId NULL (hem malik hem kiracı görsün)
+            message.setReceiverId(null);
+            log.info("Apartment-wide message - receiverId set to NULL for apartment: {}", apartmentId);
+        } else {
+            // Diğer durumlar
+            message.setReceiverId(null);
+            log.info("Other message type - receiverId set to NULL");
+        }
+        
         log.info("Final apartmentId to be saved: {}", apartmentId);
         message.setApartmentId(apartmentId);
         message.setChatType(request.getChatType());
@@ -60,6 +91,13 @@ public class MessageService {
         
         Message saved = messageRepository.save(message);
         log.info("Message created with ID: {}", saved.getId());
+        
+        // Eğer daire bazlı mesajsa, hem malik hem kiracıya bildirim gönder
+        // Not: Bildirim sistemi şu an private method kullanıyor, 
+        // kullanıcılar mesajları zaten mesajlar sayfasında görecek
+        if ("apartment".equals(request.getChatType()) && apartmentId != null) {
+            log.info("Apartment message saved for apartment: {}, residents will see it in messages", apartmentId);
+        }
         
         return toResponse(saved);
     }
@@ -108,11 +146,27 @@ public class MessageService {
     public List<MessageResponse> getGroupMessages(String siteId) {
         log.info("Fetching group messages for site: {}", siteId);
         List<Message> messages = messageRepository.findBySiteIdAndChatTypeOrderByCreatedAtAsc(siteId, "group");
-        return messages.stream().map(this::toResponse).collect(Collectors.toList());
+        
+        // Sadece site üyesi olan kullanıcıların mesajlarını filtrele
+        return messages.stream()
+                .filter(msg -> isUserMemberOfSite(msg.getSenderId(), siteId))
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
     
     public List<MessageResponse> getSiteMessages(String siteId, String userId) {
         log.info("Fetching all messages for site: {} and user: {}", siteId, userId);
+        
+        // Kullanıcının bu siteye üye olup olmadığını kontrol et
+        if (!isUserMemberOfSite(userId, siteId)) {
+            log.warn("User {} is not a member of site {}, returning empty message list", userId, siteId);
+            return List.of();
+        }
+        
+        // Kullanıcının apartmentId'sini al
+        String userApartmentId = getUserApartmentId(userId);
+        log.info("User {} apartment ID: {}", userId, userApartmentId);
+        
         // Hem group, security, hem de apartment mesajlarını getir
         List<Message> groupMessages = messageRepository.findBySiteIdAndChatTypeOrderByCreatedAtAsc(siteId, "group");
         List<Message> securityMessages = messageRepository.findSecurityMessagesByUser(siteId);
@@ -122,8 +176,36 @@ public class MessageService {
         groupMessages.addAll(securityMessages);
         groupMessages.addAll(apartmentMessages);
         
+        // Sadece site üyesi olan kullanıcıların mesajlarını filtrele
+        List<Message> filteredMessages = groupMessages.stream()
+                .filter(msg -> {
+                    // Gönderen site üyesi mi?
+                    boolean senderIsMember = isUserMemberOfSite(msg.getSenderId(), siteId);
+                    if (!senderIsMember) {
+                        log.debug("Filtering out message from non-member sender: {}", msg.getSenderId());
+                        return false;
+                    }
+                    
+                    // Apartment mesajları için: Kullanıcının dairesindeki mesajları göster
+                    if ("apartment".equals(msg.getChatType())) {
+                        // Eğer mesaj kullanıcının dairesine aitse göster
+                        if (userApartmentId != null && userApartmentId.equals(msg.getApartmentId())) {
+                            return true;
+                        }
+                        // Eğer kullanıcı gönderen veya alıcıysa göster
+                        if (userId.equals(msg.getSenderId()) || userId.equals(msg.getReceiverId())) {
+                            return true;
+                        }
+                        // Diğer daire mesajlarını gösterme
+                        return false;
+                    }
+                    
+                    return true;
+                })
+                .collect(Collectors.toList());
+        
         // Tarihe göre sırala
-        return groupMessages.stream()
+        return filteredMessages.stream()
                 .sorted((m1, m2) -> m2.getCreatedAt().compareTo(m1.getCreatedAt()))
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -194,6 +276,12 @@ public class MessageService {
     private MessageResponse toResponse(Message message) {
         User sender = userRepository.findById(message.getSenderId()).orElse(null);
         
+        // Receiver bilgisini al (eğer receiverId varsa)
+        User receiver = null;
+        if (message.getReceiverId() != null) {
+            receiver = userRepository.findById(message.getReceiverId()).orElse(null);
+        }
+        
         // Apartment bilgisini al
         String apartmentNumber = null;
         if (message.getApartmentId() != null) {
@@ -214,6 +302,8 @@ public class MessageService {
                 .senderName(sender != null ? sender.getFullName() : "Unknown")
                 .senderRole(getUserRole(sender))
                 .receiverId(message.getReceiverId())
+                .receiverName(receiver != null ? receiver.getFullName() : null)
+                .receiverRole(receiver != null ? getUserRole(receiver) : null)
                 .apartmentId(message.getApartmentId())
                 .apartmentNumber(apartmentNumber)
                 .chatType(message.getChatType())
@@ -269,11 +359,18 @@ public class MessageService {
     
     /**
      * Daire bazlı mesajları getir
+     * SADECE bu siteye üye olan kullanıcıların mesajlarını göster
+     * Hem malik hem kiracı aynı mesajları görür
      */
     public List<MessageResponse> getApartmentMessages(String siteId, String apartmentId) {
         log.info("Fetching apartment messages for site: {}, apartment: {}", siteId, apartmentId);
         List<Message> messages = messageRepository.findApartmentMessages(siteId, apartmentId);
-        return messages.stream().map(this::toResponse).collect(Collectors.toList());
+        
+        // Sadece site üyesi olan kullanıcıların mesajlarını filtrele
+        return messages.stream()
+                .filter(msg -> isUserMemberOfSite(msg.getSenderId(), siteId))
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
     
     /**
@@ -286,12 +383,46 @@ public class MessageService {
     
     /**
      * Mesajlaşma için daire listesini getir
+     * SADECE bu siteye üye olan sakinlerin dairelerini göster
      */
     public List<java.util.Map<String, Object>> getApartmentsForMessaging(String siteId) {
         log.info("Fetching apartments for messaging in site: {}", siteId);
         
-        // Tüm daireleri getir (sadece mesajı olanları değil)
+        // Tüm daireleri getir
         List<com.sitedefteri.entity.Apartment> apartments = apartmentRepository.findBySiteId(siteId);
+        
+        // Site üyesi olan tüm sakinleri al
+        List<String> siteMemberIds = getSiteMemberIds(siteId);
+        log.info("Found {} site members for site {}", siteMemberIds.size(), siteId);
+        
+        // UserService'den tüm kullanıcıları al (UserResponse olarak, apartmentId ve residentType ile)
+        // getAllUsersBySite yerine direkt userRepository kullanıp toResponseWithApartment çağıralım
+        List<com.sitedefteri.entity.User> allSiteUsers = userRepository.findBySiteId(siteId);
+        
+        // Kullanıcıları apartment_id'ye göre grupla
+        java.util.Map<String, java.util.List<com.sitedefteri.dto.response.UserResponse>> usersByApartment = new java.util.HashMap<>();
+        
+        for (com.sitedefteri.entity.User user : allSiteUsers) {
+            if (!siteMemberIds.contains(user.getId())) {
+                continue;
+            }
+            
+            // Kullanıcının hangi dairede olduğunu bul
+            for (com.sitedefteri.entity.Apartment apt : apartments) {
+                boolean isOwner = user.getId().equals(apt.getOwnerUserId());
+                boolean isResident = user.getId().equals(apt.getCurrentResidentId());
+                
+                if (isOwner || isResident) {
+                    com.sitedefteri.dto.response.UserResponse userResponse = new com.sitedefteri.dto.response.UserResponse();
+                    userResponse.setUserId(user.getId());
+                    userResponse.setFullName(user.getFullName());
+                    userResponse.setResidentType(isOwner ? "owner" : "tenant");
+                    
+                    usersByApartment.computeIfAbsent(apt.getId(), k -> new java.util.ArrayList<>()).add(userResponse);
+                    break;
+                }
+            }
+        }
         
         return apartments.stream()
                 .map(apartment -> {
@@ -301,22 +432,108 @@ public class MessageService {
                     map.put("block", apartment.getBlockName() != null ? apartment.getBlockName() : "");
                     map.put("floor", apartment.getFloor());
                     
-                    // Sakin bilgisini ekle
-                    if (apartment.getCurrentResidentId() != null) {
-                        userRepository.findById(apartment.getCurrentResidentId()).ifPresent(resident -> {
-                            map.put("residentId", resident.getId());
-                            map.put("residentName", resident.getFullName());
-                        });
+                    StringBuilder residentNames = new StringBuilder();
+                    
+                    // Bu dairedeki kullanıcıları al
+                    java.util.List<com.sitedefteri.dto.response.UserResponse> apartmentUsers = usersByApartment.get(apartment.getId());
+                    
+                    String ownerId = null;
+                    String ownerName = null;
+                    String tenantId = null;
+                    String tenantName = null;
+                    
+                    if (apartmentUsers != null) {
+                        for (com.sitedefteri.dto.response.UserResponse user : apartmentUsers) {
+                            String residentType = user.getResidentType();
+                            
+                            if ("owner".equalsIgnoreCase(residentType) || "malik".equalsIgnoreCase(residentType)) {
+                                if (ownerId == null) {
+                                    ownerId = user.getUserId();
+                                    ownerName = user.getFullName();
+                                }
+                            } else if ("tenant".equalsIgnoreCase(residentType) || "kiracı".equalsIgnoreCase(residentType) || "kiraci".equalsIgnoreCase(residentType)) {
+                                if (tenantId == null) {
+                                    tenantId = user.getUserId();
+                                    tenantName = user.getFullName();
+                                }
+                            }
+                        }
                     }
                     
-                    // Eğer sakin yoksa default değer
-                    if (!map.containsKey("residentName")) {
+                    // Kiracı varsa önce onu ekle
+                    if (tenantId != null) {
+                        map.put("residentId", tenantId);
+                        map.put("tenantName", tenantName);
+                        residentNames.append(tenantName).append(" (Kiracı)");
+                    }
+                    
+                    // Malik varsa ekle
+                    if (ownerId != null) {
+                        map.put("ownerId", ownerId);
+                        map.put("ownerName", ownerName);
+                        
+                        if (residentNames.length() > 0) {
+                            residentNames.append(" • ");
+                        }
+                        residentNames.append(ownerName).append(" (Malik)");
+                    }
+                    
+                    // Birleştirilmiş isim
+                    if (residentNames.length() > 0) {
+                        map.put("residentName", residentNames.toString());
+                        map.put("isSiteMember", true);
+                    } else {
                         map.put("residentName", "Boş Daire");
+                        map.put("isSiteMember", false);
                     }
                     
                     return map;
                 })
+                // TÜM daireleri döndür (boş daireler dahil)
                 .collect(Collectors.toList());
+    }
+    
+    /**
+     * Site üyesi olan tüm kullanıcı ID'lerini getir (user_site_memberships'ten)
+     */
+    private List<String> getSiteMemberIds(String siteId) {
+        try {
+            String query = "SELECT user_id FROM user_site_memberships " +
+                          "WHERE site_id = :siteId " +
+                          "AND is_deleted = FALSE AND status = 'aktif'";
+            
+            @SuppressWarnings("unchecked")
+            List<String> result = entityManager.createNativeQuery(query)
+                    .setParameter("siteId", siteId)
+                    .getResultList();
+            
+            return result;
+        } catch (Exception e) {
+            log.error("Error getting site member IDs for site {}: {}", siteId, e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+    
+    /**
+     * Kullanıcının belirli bir siteye üye olup olmadığını kontrol et
+     */
+    private boolean isUserMemberOfSite(String userId, String siteId) {
+        try {
+            String query = "SELECT COUNT(*) as count FROM user_site_memberships " +
+                          "WHERE user_id = :userId AND site_id = :siteId " +
+                          "AND is_deleted = FALSE AND status = 'aktif'";
+            
+            Object result = entityManager.createNativeQuery(query)
+                    .setParameter("userId", userId)
+                    .setParameter("siteId", siteId)
+                    .getSingleResult();
+            
+            Long count = ((Number) result).longValue();
+            return count > 0;
+        } catch (Exception e) {
+            log.error("Error checking site membership for user {}: {}", userId, e.getMessage());
+            return false;
+        }
     }
     
     /**

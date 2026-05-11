@@ -15,7 +15,7 @@ import {
   Home,
   LogOut,
   ChevronRight,
-  Bell,
+
   Shield,
   HelpCircle,
   Globe,
@@ -226,13 +226,6 @@ const ProfileScreen = () => {
             <ChevronRight size={16} color="#9ca3af" />
           </Pressable>
 
-          <Pressable style={styles.menuItem}>
-            <View style={styles.menuLeft}>
-              <Bell size={18} color="#6b7280" style={styles.menuIcon} />
-              <Text style={styles.menuLabel}>{t('profile.notifications')}</Text>
-            </View>
-            <ChevronRight size={16} color="#9ca3af" />
-          </Pressable>
 
           <Pressable
             style={styles.menuItem}
@@ -250,7 +243,7 @@ const ProfileScreen = () => {
             </View>
           </Pressable>
 
-          <Pressable style={styles.menuItem}>
+          <Pressable style={styles.menuItem} onPress={() => Alert.alert('Gizlilik', 'Gizlilik ayarları yakında eklenecek')}>
             <View style={styles.menuLeft}>
               <Shield size={18} color="#6b7280" style={styles.menuIcon} />
               <Text style={styles.menuLabel}>{t('profile.privacy')}</Text>
@@ -258,7 +251,7 @@ const ProfileScreen = () => {
             <ChevronRight size={16} color="#9ca3af" />
           </Pressable>
 
-          <Pressable style={styles.menuItem}>
+          <Pressable style={styles.menuItem} onPress={() => Alert.alert('Yardım', 'Yardım sayfası yakında eklenecek')}>
             <View style={styles.menuLeft}>
               <HelpCircle size={18} color="#6b7280" style={styles.menuIcon} />
               <Text style={styles.menuLabel}>{t('profile.help')}</Text>

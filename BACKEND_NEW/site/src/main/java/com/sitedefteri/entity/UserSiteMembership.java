@@ -32,6 +32,9 @@ public class UserSiteMembership {
     @Column(name = "role_type", nullable = false, length = 50)
     private String roleType;
     
+    @Column(name = "status", length = 20)
+    private String status = "aktif";
+    
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted = false;
     

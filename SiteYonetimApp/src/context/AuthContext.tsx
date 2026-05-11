@@ -12,6 +12,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   signOut: () => Promise<void>; // Alias for logout
   switchSite: (siteId: string, siteName: string) => Promise<void>;
+  switchApartment: (apartmentId: string, blockName: string, unitNumber: string) => Promise<void>;
   hasRole: (role: string) => boolean;
   hasPermission: (permission: string) => boolean;
   isImpersonating: boolean;
@@ -56,7 +57,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const refreshUser = async () => {
-    await loadUser();
+    try {
+      // Get fresh user data from backend
+      const token = await AsyncStorage.getItem('accessToken');
+      if (!token) {
+        await loadUser(); // Fallback to storage
+        return;
+      }
+      
+      // Call /auth/me or similar endpoint to get fresh user data
+      // For now, just reload from storage
+      await loadUser();
+    } catch (error) {
+      console.error('Refresh user error:', error);
+      await loadUser();
+    }
   };
 
   const login = async (credentials: LoginRequest) => {
@@ -106,6 +121,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         siteId: response.user.siteId || response.siteId || '1',
         siteName: siteName,
         apartmentId: response.user.apartmentId, // Add apartmentId from backend
+        blockName: (response.user as any).blockName, // Add blockName from backend
+        unitNumber: (response.user as any).unitNumber, // Add unitNumber from backend
       };
       
       console.log('👤 User data created:', userData);
@@ -210,6 +227,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const switchApartment = async (apartmentId: string, blockName: string, unitNumber: string) => {
+    try {
+      if (!user) return;
+      
+      // Şimdilik backend çağrısı yapmadan sadece local state'i güncelle
+      // Backend endpoint hazır olunca aşağıdaki satırı aktif ederiz:
+      // await apiClient.post('/users/me/switch-apartment', { apartmentId });
+      
+      // Update user with new apartment info
+      const updatedUser = {
+        ...user,
+        apartmentId: apartmentId,
+        blockName: blockName,
+        unitNumber: unitNumber,
+      };
+      
+      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      
+      console.log(`Switched to apartment: ${blockName} - ${unitNumber} (${apartmentId})`);
+    } catch (error) {
+      console.error('Switch apartment error:', error);
+      throw error;
+    }
+  };
+
   const hasRole = (role: string): boolean => {
     if (!user?.roles) return false;
     
@@ -245,6 +288,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         logout,
         signOut,
         switchSite,
+        switchApartment,
         hasRole,
         hasPermission,
         isImpersonating,

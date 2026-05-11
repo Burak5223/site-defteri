@@ -22,4 +22,12 @@ public class UserResponse {
     private Boolean phoneVerified;
     private String preferredLanguage;
     private LocalDateTime createdAt;
+    
+    // Apartment information
+    private String blockName;
+    private String unitNumber;
+    private String residentType; // "owner" or "tenant"
+    
+    // QR Token for package delivery
+    private String userQrToken;
 }

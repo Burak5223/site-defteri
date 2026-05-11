@@ -104,10 +104,11 @@ public class VotingServiceImpl {
         Voting voting = votingRepository.findById(request.getVotingId())
                 .orElseThrow(() -> new RuntimeException("Oylama bulunamadı"));
         
-        LocalDateTime now = LocalDateTime.now();
-        if (now.isBefore(voting.getStartDate()) || now.isAfter(voting.getEndDate())) {
-            throw new RuntimeException("Oylama süresi dolmuş veya henüz başlamamış");
-        }
+        // Demo ortamı için zaman kontrolü devre dışı
+        // LocalDateTime now = LocalDateTime.now();
+        // if (now.isBefore(voting.getStartDate()) || now.isAfter(voting.getEndDate())) {
+        //     throw new RuntimeException("Oylama süresi dolmuş veya henüz başlamamış");
+        // }
 
         // Oy kaydet
         UserVote vote = new UserVote();

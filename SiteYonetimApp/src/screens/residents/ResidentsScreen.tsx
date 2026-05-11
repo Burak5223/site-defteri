@@ -25,11 +25,14 @@ import {
   MoreVertical,
   CheckCircle2,
   XCircle,
+  X,
+  Check,
 } from 'lucide-react-native';
 import { apiClient } from '../../api/apiClient';
 import { spacing, fontSize, lightTheme } from '../../theme';
 import { useAuth } from '../../context/AuthContext';
 import { useI18n } from '../../context/I18nContext';
+import { siteService, Block } from '../../services/site.service';
 
 type ResidentTypeFilter = 'all' | 'owner' | 'tenant';
 
@@ -44,6 +47,9 @@ const ResidentsScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [blocks, setBlocks] = useState<Block[]>([]);
+  const [selectedBlock, setSelectedBlock] = useState<string | null>(null);
+  const [showBlockFilter, setShowBlockFilter] = useState(false);
   const [newResident, setNewResident] = useState({
     fullName: '',
     email: '',
@@ -55,12 +61,24 @@ const ResidentsScreen = () => {
 
   useEffect(() => {
     loadResidents();
+    loadBlocks();
   }, []);
 
   const loadResidents = async () => {
     try {
       const data = await apiClient.get<any[]>('/users');
-      setResidents(data);
+      console.log('=== RESIDENTS DATA ===');
+      console.log('Total residents:', data.length);
+      console.log('Sample resident:', data[0]);
+      
+      // Tüm kullanıcıları göster (backend zaten site bazlı filtreleme yapıyor)
+      // Sadece daire bilgisi olanları göster
+      const residentsWithApartments = data.filter(user => 
+        user.blockName && user.unitNumber
+      );
+      
+      console.log('Residents with apartments:', residentsWithApartments.length);
+      setResidents(residentsWithApartments);
     } catch (error) {
       console.error('Sakinler yükleme hatası:', error);
       Alert.alert(t('common.error'), 'Sakinler yüklenemedi. Sunucuya ulaşılamıyor.');
@@ -71,22 +89,40 @@ const ResidentsScreen = () => {
     }
   };
 
+  const loadBlocks = async () => {
+    try {
+      const siteId = user?.siteId || '1';
+      const data = await siteService.getSiteBlocks(siteId);
+      setBlocks(data);
+    } catch (error) {
+      console.error('Bloklar yüklenemedi:', error);
+    }
+  };
+
   const handleAddResident = async () => {
-    if (!newResident.fullName || !newResident.email) {
-      Alert.alert(t('common.error'), 'Ad Soyad ve Email zorunludur.');
+    if (!newResident.fullName || !newResident.email || !newResident.blockName || !newResident.unitNumber) {
+      Alert.alert(t('common.error'), 'Ad Soyad, Email, Blok ve Daire No zorunludur.');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await apiClient.post('/users', newResident);
-      Alert.alert(t('common.success'), 'Sakin başarıyla eklendi.');
+      // Create resident with apartment assignment
+      const residentData = {
+        ...newResident,
+        siteId: user?.siteId || '1',
+        password: 'temp123', // Temporary password
+        createProfile: true // Flag to create full resident profile
+      };
+      
+      await apiClient.post('/users/create-resident', residentData);
+      Alert.alert(t('common.success'), 'Sakin başarıyla eklendi ve profil kartı oluşturuldu.');
       setShowAddModal(false);
       setNewResident({ fullName: '', email: '', phone: '', residentType: 'tenant', blockName: '', unitNumber: '' });
       loadResidents();
     } catch (error) {
-      console.error('Kişi ekleme hatası:', error);
-      Alert.alert(t('common.error'), 'Kişi eklenirken bir hata oluştu.');
+      console.error('Sakin ekleme hatası:', error);
+      Alert.alert(t('common.error'), 'Sakin eklenirken bir hata oluştu.');
     } finally {
       setIsSubmitting(false);
     }
@@ -105,9 +141,15 @@ const ResidentsScreen = () => {
       (resident.phone || '').includes(searchQuery);
 
     const matchesFilter = filterType === 'all' || resident.residentType === filterType;
+    
+    const matchesBlock = !selectedBlock || resident.blockName === selectedBlock;
 
-    return matchesSearch && matchesFilter;
+    return matchesSearch && matchesFilter && matchesBlock;
   });
+
+  // Grup olarak ayır: Malikler ve Kiracılar
+  const owners = filteredResidents.filter(r => r.residentType === 'owner');
+  const tenants = filteredResidents.filter(r => r.residentType === 'tenant');
 
   const renderInitials = (fullName: string) =>
     (fullName || 'U')
@@ -141,10 +183,10 @@ const ResidentsScreen = () => {
         </View>
          <Pressable 
             style={styles.filterButton}
-            onPress={() => setFilterType(prev => prev === 'all' ? 'owner' : prev === 'owner' ? 'tenant' : 'all')}
+            onPress={() => setShowBlockFilter(true)}
           >
-            <Filter size={20} color={filterType !== 'all' ? '#0f766e' : '#64748b'} />
-            {filterType !== 'all' && (
+            <Filter size={20} color={selectedBlock ? '#0f766e' : '#64748b'} />
+            {selectedBlock && (
               <View style={{position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: '#0f766e'}} />
             )}
         </Pressable>
@@ -166,71 +208,128 @@ const ResidentsScreen = () => {
         {/* Quick Stats */}
         <View style={styles.statsRow}>
              <View style={styles.statChip}>
-                <Text style={styles.statValue}>{residents.length}</Text>
+                <Text style={styles.statValue}>{filteredResidents.length}</Text>
                 <Text style={styles.statLabel}>{t('residents.total')}</Text>
              </View>
              <View style={[styles.statChip, { backgroundColor: '#f0fdfa', borderColor: '#ccfbf1' }]}>
                 <Text style={[styles.statValue, { color: '#0f766e' }]}>
-                    {residents.filter(r => r.residentType === 'owner').length}
+                    {owners.length}
                 </Text>
-                <Text style={[styles.statLabel, { color: '#0f766e' }]}>{t('residents.owner')}</Text>
+                <Text style={[styles.statLabel, { color: '#0f766e' }]}>Malik</Text>
              </View>
              <View style={[styles.statChip, { backgroundColor: '#eff6ff', borderColor: '#dbeafe' }]}>
                 <Text style={[styles.statValue, { color: '#3b82f6' }]}>
-                    {residents.filter(r => r.residentType === 'tenant').length}
+                    {tenants.length}
                 </Text>
-                <Text style={[styles.statLabel, { color: '#3b82f6' }]}>{t('residents.tenant')}</Text>
+                <Text style={[styles.statLabel, { color: '#3b82f6' }]}>Kiracı</Text>
              </View>
         </View>
 
+        {/* Blok Filtresi Göstergesi */}
+        {selectedBlock && (
+          <View style={styles.filterChip}>
+            <Building2 size={16} color="#0f766e" />
+            <Text style={styles.filterChipText}>{selectedBlock}</Text>
+            <Pressable onPress={() => setSelectedBlock(null)} style={styles.filterChipClose}>
+              <X size={14} color="#0f766e" />
+            </Pressable>
+          </View>
+        )}
+
         {filteredResidents.length > 0 ? (
           <View style={styles.list}>
-            {filteredResidents.map((resident) => {
-              const isOwner = resident.residentType === 'owner';
-              
-              return (
-                <Pressable
-                  key={resident.id}
-                  style={styles.card}
-                  onPress={() => setSelectedResident(resident)}
-                >
-                  <View style={styles.cardLeft}>
-                    <View style={[styles.avatar, isOwner ? styles.avatarOwner : styles.avatarTenant]}>
-                        <Text style={[styles.avatarText, isOwner ? styles.textOwner : styles.textTenant]}>
-                            {renderInitials(resident.fullName)}
-                        </Text>
-                    </View>
-                  </View>
-                  
-                  <View style={styles.cardBody}>
-                    <View style={styles.nameRow}>
-                        <Text style={styles.cardName} numberOfLines={1}>{resident.fullName}</Text>
-                        {isOwner && <Crown size={14} color="#f59e0b" style={{ marginLeft: 4 }} />}
-                    </View>
-                    <Text style={styles.cardSubtext}>{resident.blockName} • Daire {resident.unitNumber}</Text>
-                    
-                    <View style={styles.cardFooter}>
-                        <View style={[styles.badge, isOwner ? styles.badgeOwner : styles.badgeTenant]}>
-                            <Text style={[styles.badgeText, isOwner ? styles.textOwner : styles.textTenant]}>
-                                {isOwner ? t('residents.ownerLabel') : t('residents.tenantLabel')}
+            {/* Malikler Grubu */}
+            {owners.length > 0 && (
+              <>
+                <View style={styles.groupHeader}>
+                  <Crown size={18} color="#f59e0b" />
+                  <Text style={styles.groupHeaderText}>Malikler ({owners.length})</Text>
+                </View>
+                {owners.map((resident) => {
+                  return (
+                    <Pressable
+                      key={resident.id}
+                      style={styles.card}
+                      onPress={() => setSelectedResident(resident)}
+                    >
+                      <View style={styles.cardLeft}>
+                        <View style={styles.avatarOwner}>
+                            <Text style={styles.textOwner}>
+                                {renderInitials(resident.fullName)}
                             </Text>
                         </View>
-                        <View style={styles.dot} />
-                        <Text style={[
-                            styles.statusText, 
-                            { color: resident.status === 'active' ? '#16a34a' : '#94a3b8' }
-                        ]}>
-                            {resident.status === 'active' ? t('residents.active') : t('residents.inactive')}
-                        </Text>
-                    </View>
-                  </View>
+                      </View>
+                      
+                      <View style={styles.cardBody}>
+                        <View style={styles.nameRow}>
+                            <Text style={styles.cardName} numberOfLines={1}>{resident.fullName}</Text>
+                            <Crown size={14} color="#f59e0b" style={{ marginLeft: 4 }} />
+                        </View>
+                        <Text style={styles.cardSubtext}>{resident.blockName} • Daire {resident.unitNumber}</Text>
+                        
+                        <View style={styles.cardFooter}>
+                            <View style={styles.badgeOwner}>
+                                <Text style={[styles.badgeText, styles.textOwner]}>
+                                    Malik
+                                </Text>
+                            </View>
+                        </View>
+                      </View>
 
-                  <View style={styles.cardRight}>
-                     <ChevronRight size={20} color="#cbd5e1" />
-                  </View>
-                </Pressable>
-              );
-            })}
+                      <View style={styles.cardRight}>
+                         <ChevronRight size={20} color="#cbd5e1" />
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </>
+            )}
+
+            {/* Kiracılar Grubu */}
+            {tenants.length > 0 && (
+              <>
+                <View style={[styles.groupHeader, { marginTop: owners.length > 0 ? 24 : 0 }]}>
+                  <Home size={18} color="#3b82f6" />
+                  <Text style={styles.groupHeaderText}>Kiracılar ({tenants.length})</Text>
+                </View>
+                {tenants.map((resident) => {
+                  return (
+                    <Pressable
+                      key={resident.id}
+                      style={styles.card}
+                      onPress={() => setSelectedResident(resident)}
+                    >
+                      <View style={styles.cardLeft}>
+                        <View style={styles.avatarTenant}>
+                            <Text style={styles.textTenant}>
+                                {renderInitials(resident.fullName)}
+                            </Text>
+                        </View>
+                      </View>
+                      
+                      <View style={styles.cardBody}>
+                        <View style={styles.nameRow}>
+                            <Text style={styles.cardName} numberOfLines={1}>{resident.fullName}</Text>
+                        </View>
+                        <Text style={styles.cardSubtext}>{resident.blockName} • Daire {resident.unitNumber}</Text>
+                        
+                        <View style={styles.cardFooter}>
+                            <View style={styles.badgeTenant}>
+                                <Text style={[styles.badgeText, styles.textTenant]}>
+                                    Kiracı
+                                </Text>
+                            </View>
+                        </View>
+                      </View>
+
+                      <View style={styles.cardRight}>
+                         <ChevronRight size={20} color="#cbd5e1" />
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </>
+            )}
           </View>
         ) : (
           <View style={styles.emptyState}>
@@ -324,24 +423,6 @@ const ResidentsScreen = () => {
                             <View style={styles.infoContent}>
                                 <Text style={styles.infoLabel}>{t('residents.location')}</Text>
                                 <Text style={styles.infoValue}>{selectedResident.blockName} • No: {selectedResident.unitNumber}</Text>
-                            </View>
-                        </View>
-                         <View style={styles.divider} />
-                         <View style={styles.infoRow}>
-                             <View style={styles.iconBox}>
-                                {selectedResident.status === 'active' ? 
-                                    <CheckCircle2 size={20} color="#16a34a" /> : 
-                                    <XCircle size={20} color="#94a3b8" />
-                                }
-                            </View>
-                            <View style={styles.infoContent}>
-                                <Text style={styles.infoLabel}>{t('residents.status')}</Text>
-                                <Text style={[
-                                    styles.infoValue, 
-                                    { color: selectedResident.status === 'active' ? '#16a34a' : '#64748b' }
-                                ]}>
-                                    {selectedResident.status === 'active' ? t('residents.activeStatus') : t('residents.inactiveStatus')}
-                                </Text>
                             </View>
                         </View>
                     </View>
@@ -452,11 +533,70 @@ const ResidentsScreen = () => {
                         {isSubmitting ? (
                           <ActivityIndicator size="small" color="#fff" />
                         ) : (
-                          <Text style={{color: '#fff', fontSize: 16, fontWeight: 'bold'}}>Kaydet</Text>
+                          <Text style={{color: '#fff', fontSize: 16, fontWeight: 'bold'}}>Ekle</Text>
                         )}
                       </Pressable>
                       
                     </View>
+                </ScrollView>
+            </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Blok Filtresi Modal */}
+      <Modal
+        visible={showBlockFilter}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowBlockFilter(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowBlockFilter(false)}>
+            <Pressable style={[styles.modalContent, { height: '50%' }]} onPress={e => e.stopPropagation()}>
+                <View style={styles.modalHeader}>
+                    <View style={styles.dragHandle} />
+                    <Text style={{ marginTop: 12, fontSize: 18, fontWeight: 'bold' }}>Blok Seç</Text>
+                </View>
+
+                <ScrollView contentContainerStyle={styles.modalBody}>
+                    {/* Tümü Seçeneği */}
+                    <Pressable
+                      style={[styles.blockOption, !selectedBlock && styles.blockOptionActive]}
+                      onPress={() => {
+                        setSelectedBlock(null);
+                        setShowBlockFilter(false);
+                      }}
+                    >
+                      <View style={styles.blockOptionLeft}>
+                        <Building2 size={20} color={!selectedBlock ? '#0f766e' : '#64748b'} />
+                        <Text style={[styles.blockOptionText, !selectedBlock && { color: '#0f766e', fontWeight: '600' }]}>
+                          Tüm Bloklar
+                        </Text>
+                      </View>
+                      {!selectedBlock && <Check size={20} color="#0f766e" />}
+                    </Pressable>
+
+                    {/* Blok Listesi */}
+                    {blocks.map((block) => {
+                      const isSelected = selectedBlock === block.name;
+                      return (
+                        <Pressable
+                          key={block.id}
+                          style={[styles.blockOption, isSelected && styles.blockOptionActive]}
+                          onPress={() => {
+                            setSelectedBlock(block.name);
+                            setShowBlockFilter(false);
+                          }}
+                        >
+                          <View style={styles.blockOptionLeft}>
+                            <Building2 size={20} color={isSelected ? '#0f766e' : '#64748b'} />
+                            <Text style={[styles.blockOptionText, isSelected && { color: '#0f766e', fontWeight: '600' }]}>
+                              {block.name}
+                            </Text>
+                          </View>
+                          {isSelected && <Check size={20} color="#0f766e" />}
+                        </Pressable>
+                      );
+                    })}
                 </ScrollView>
             </Pressable>
         </Pressable>
@@ -837,6 +977,69 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 16,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0fdfa',
+    borderWidth: 1,
+    borderColor: '#99f6e4',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignSelf: 'flex-start',
+    marginBottom: 16,
+    gap: 6,
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0f766e',
+  },
+  filterChipClose: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(15, 118, 110, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
+  },
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  groupHeaderText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  blockOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    marginBottom: 8,
+  },
+  blockOptionActive: {
+    backgroundColor: '#f0fdfa',
+    borderColor: '#99f6e4',
+  },
+  blockOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  blockOptionText: {
+    fontSize: 15,
+    color: '#0f172a',
   },
 });
 
