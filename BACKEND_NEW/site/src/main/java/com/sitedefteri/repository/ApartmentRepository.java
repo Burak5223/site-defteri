@@ -37,6 +37,13 @@ public interface ApartmentRepository extends JpaRepository<Apartment, String> {
            nativeQuery = true)
     long countBySiteId(@Param("siteId") String siteId);
     
+    @Query(value = "SELECT a.* FROM apartments a " +
+           "JOIN blocks b ON a.block_id = b.id " +
+           "WHERE b.site_id = :siteId AND a.is_deleted = 0 " +
+           "ORDER BY a.block_name ASC, CAST(a.unit_number AS UNSIGNED) ASC", 
+           nativeQuery = true)
+    List<Apartment> findBySiteIdOrderByBlockNameAscUnitNumberAsc(@Param("siteId") String siteId);
+    
     // Kullanıcının residency_history tablosunda aktif olarak kayıtlı olduğu daireleri bul
     @Query(value = "SELECT DISTINCT a.* FROM apartments a " +
            "JOIN residency_history rh ON a.id = rh.apartment_id " +

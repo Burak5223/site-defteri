@@ -28,19 +28,37 @@ public class TicketService {
                 .collect(Collectors.toList());
     }
     
-    public List<TicketResponse> getMyTickets(String userId) {
-        // Get user's apartment
-        String apartmentId = getUserApartmentId(userId);
+    public List<TicketResponse> getMyTickets(String userId, String siteId) {
+        log.info("Getting tickets for user: {}, siteId: {}", userId, siteId);
         
-        if (apartmentId != null) {
-            // Return all tickets for this apartment (including those created by admin)
-            return ticketRepository.findByApartmentIdOrderByCreatedAtDesc(apartmentId)
+        // Eğer siteId verilmişse (admin/manager için), direkt site bazlı arızaları dön
+        if (siteId != null && !siteId.isEmpty()) {
+            log.info("Returning all tickets for site: {}", siteId);
+            return ticketRepository.findBySiteIdOrderByCreatedAtDesc(siteId)
                     .stream()
                     .map(this::toResponse)
                     .collect(Collectors.toList());
         }
         
+        // Resident users should see ALL tickets in their site, not just their apartment tickets
+        // Get user's site ID from their apartments
+        List<String> apartmentIds = getUserApartmentIds(userId);
+        
+        if (!apartmentIds.isEmpty()) {
+            // Get site ID from first apartment
+            String userSiteId = getSiteIdFromApartment(apartmentIds.get(0));
+            if (userSiteId != null) {
+                log.info("Returning all tickets for user's site: {}", userSiteId);
+                // Return ALL tickets for the site
+                return ticketRepository.findBySiteIdOrderByCreatedAtDesc(userSiteId)
+                        .stream()
+                        .map(this::toResponse)
+                        .collect(Collectors.toList());
+            }
+        }
+        
         // Fallback: return only user's own tickets
+        log.warn("No site found for user {}, returning user's own tickets", userId);
         return ticketRepository.findByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
                 .map(this::toResponse)
@@ -88,6 +106,35 @@ public class TicketService {
             }
         } catch (Exception e) {
             log.warn("Could not find apartment for user {}: {}", userId, e.getMessage());
+        }
+        return null;
+    }
+    
+    /**
+     * Helper: Get all user's apartment IDs from residency_history
+     */
+    private List<String> getUserApartmentIds(String userId) {
+        try {
+            // Query residency_history to find all active apartments
+            return ticketRepository.findAllApartmentsByUserId(userId);
+        } catch (Exception e) {
+            log.warn("Could not find apartments for user {}: {}", userId, e.getMessage());
+            return List.of();
+        }
+    }
+    
+    /**
+     * Helper: Get site ID from apartment ID
+     */
+    private String getSiteIdFromApartment(String apartmentId) {
+        try {
+            // Query to get site_id from apartment via blocks table
+            var result = ticketRepository.findSiteIdByApartmentId(apartmentId);
+            if (!result.isEmpty()) {
+                return result.get(0);
+            }
+        } catch (Exception e) {
+            log.warn("Could not find site for apartment {}: {}", apartmentId, e.getMessage());
         }
         return null;
     }
@@ -195,13 +242,22 @@ public class TicketService {
     private TicketResponse toResponse(Ticket ticket) {
         TicketResponse response = new TicketResponse();
         response.setId(ticket.getId());
+        response.setTicketNumber(ticket.getTicketNumber());
         response.setTitle(ticket.getTitle());
         response.setDescription(ticket.getDescription());
         response.setCategory(ticket.getCategory());
         // Map Turkish enum to English for frontend
         response.setStatus(mapEnumToStatus(ticket.getStatus()));
         response.setPriority(ticket.getPriority().name());
+        response.setUserId(ticket.getUserId());
+        response.setApartmentId(ticket.getApartmentId());
+        response.setAssignedTo(ticket.getAssignedTo());
+        response.setCreatedBy(ticket.getCreatedBy());
+        response.setUpdatedBy(ticket.getUpdatedBy());
         response.setCreatedAt(ticket.getCreatedAt());
+        response.setUpdatedAt(ticket.getUpdatedAt());
+        response.setResolvedAt(ticket.getResolvedAt());
+        response.setSiteId(ticket.getSiteId());
         return response;
     }
     

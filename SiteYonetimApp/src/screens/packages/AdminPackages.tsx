@@ -22,8 +22,9 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { packageService, Package } from '../../services/package.service';
-import { colors, spacing, borderRadius } from '../../theme';
+import { spacing, borderRadius } from '../../theme';
 import { useI18n } from '../../context/I18nContext';
+import { useTheme } from '../../context/ThemeContext';
 
 // Mock apartments for display purposes if backend doesn't provide them with packages
 // In a real app we might fetch these or have them in a context
@@ -38,7 +39,9 @@ type TabKey = 'all' | 'waiting' | 'delivered';
 
 const PackagesScreen = () => {
     const { t } = useI18n();
+    const { colors } = useTheme();
     const { user, hasRole } = useAuth();
+    const styles = React.useMemo(() => createStyles(colors), [colors]);
     const [activeTab, setActiveTab] = useState<TabKey>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [packages, setPackages] = useState<any[]>([]);
@@ -426,13 +429,13 @@ const PackagesScreen = () => {
 
 export default PackagesScreen;
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8fafc',
+        backgroundColor: colors.backgroundSecondary,
     },
     header: {
-        backgroundColor: colors.white,
+        backgroundColor: colors.background,
         paddingHorizontal: spacing.screenPaddingHorizontal,
         paddingTop: spacing.lg,
         paddingBottom: spacing.lg,
@@ -448,7 +451,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#0f172a',
+        color: colors.textPrimary,
     },
     headerSubtitle: {
         fontSize: 14,
@@ -484,7 +487,7 @@ const styles = StyleSheet.create({
         flex: 1,
         height: 44,
         fontSize: 14,
-        color: '#0f172a',
+        color: colors.textPrimary,
     },
     tabsContainer: {
         flexDirection: 'row',
@@ -499,7 +502,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     activeTab: {
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.background,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
@@ -537,7 +540,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
     card: {
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.background,
         borderRadius: 16,
         padding: 16,
         borderWidth: 1,
@@ -570,7 +573,7 @@ const styles = StyleSheet.create({
     courierName: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#0f172a',
+        color: colors.textPrimary,
     },
     trackingNumber: {
         fontSize: 12,
@@ -601,7 +604,7 @@ const styles = StyleSheet.create({
         gap: 8,
         paddingBottom: 12,
         borderBottomWidth: 1,
-        borderBottomColor: '#f1f5f9',
+        borderBottomColor: colors.borderLight,
     },
     infoRow: {
         flexDirection: 'row',
@@ -613,7 +616,7 @@ const styles = StyleSheet.create({
     },
     infoValue: {
         fontSize: 13,
-        color: '#334155',
+        color: colors.textPrimary,
         fontWeight: '500',
     },
     cardActions: {
@@ -650,7 +653,7 @@ const styles = StyleSheet.create({
         padding: 20,
     },
     modalContent: {
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.background,
         borderRadius: 20,
         padding: 20,
         width: '100%',
@@ -664,7 +667,7 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#0f172a',
+        color: colors.textPrimary,
     },
     closeButton: {
         fontSize: 18,
@@ -677,7 +680,7 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 14,
         fontWeight: '500',
-        color: '#334155',
+        color: colors.textPrimary,
         marginBottom: 8,
     },
     input: {
@@ -687,7 +690,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 12,
         fontSize: 16,
-        color: '#0f172a',
+        color: colors.textPrimary,
     },
     saveButton: {
         backgroundColor: colors.primary,
@@ -703,7 +706,7 @@ const styles = StyleSheet.create({
     },
     confirmText: {
         fontSize: 16,
-        color: '#334155',
+        color: colors.textPrimary,
         marginBottom: 24,
         lineHeight: 24,
     },
@@ -739,9 +742,9 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         padding: 16,
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.background,
         borderTopWidth: 1,
-        borderTopColor: '#e5e7eb',
+        borderTopColor: colors.border,
     },
     footerButton: {
         flexDirection: 'row',
@@ -767,3 +770,6 @@ const styles = StyleSheet.create({
         color: '#ffffff',
     },
 });
+
+
+

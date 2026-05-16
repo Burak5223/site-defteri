@@ -21,11 +21,12 @@ import {
 } from 'lucide-react-native';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
 import { useI18n, Language } from '../../context/I18nContext';
+import { useTheme } from '../../context/ThemeContext';
 
 const AdminSettings = () => {
   const { t, language, changeLanguage } = useI18n();
+  const { colors: themeColors, isDarkMode, setDarkMode } = useTheme();
   const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
 
   const languages: { code: Language; name: string; flag: string }[] = [
@@ -47,34 +48,34 @@ const AdminSettings = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
+      <View style={[styles.header, { backgroundColor: themeColors.background, borderBottomColor: themeColors.border }]}>
         <View style={styles.headerIcon}>
           <SettingsIcon size={20} color={colors.primary} />
         </View>
         <View>
-          <Text style={styles.headerTitle}>{t('settings.title')}</Text>
-          <Text style={styles.headerSubtitle}>{t('settings.admin')}</Text>
+          <Text style={[styles.headerTitle, { color: themeColors.textPrimary }]}>{t('settings.title')}</Text>
+          <Text style={[styles.headerSubtitle, { color: themeColors.textSecondary }]}>{t('settings.admin')}</Text>
         </View>
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
         {/* Görünüm */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('settings.appearance')}</Text>
-          <View style={styles.settingCard}>
+          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>{t('settings.appearance')}</Text>
+          <View style={[styles.settingCard, { backgroundColor: themeColors.background, borderColor: themeColors.border }]}>
             <View style={styles.settingRow}>
               <View style={styles.settingLeft}>
                 <View style={[styles.settingIcon, { backgroundColor: colors.gray100 }]}>
                   <Moon size={18} color={colors.textSecondary} />
                 </View>
                 <View>
-                  <Text style={styles.settingTitle}>{t('settings.darkMode')}</Text>
-                  <Text style={styles.settingSubtitle}>{t('settings.nightTheme')}</Text>
+                  <Text style={[styles.settingTitle, { color: themeColors.textPrimary }]}>{t('settings.darkMode')}</Text>
+                  <Text style={[styles.settingSubtitle, { color: themeColors.textSecondary }]}>{t('settings.nightTheme')}</Text>
                 </View>
               </View>
               <Switch
-                value={darkMode}
+                value={isDarkMode}
                 onValueChange={setDarkMode}
                 trackColor={{ false: colors.gray300, true: colors.primary }}
                 thumbColor={colors.white}
@@ -85,16 +86,16 @@ const AdminSettings = () => {
 
         {/* Güvenlik */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('settings.security')}</Text>
-          <View style={styles.settingCard}>
+          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>{t('settings.security')}</Text>
+          <View style={[styles.settingCard, { backgroundColor: themeColors.background, borderColor: themeColors.border }]}>
             <Pressable style={styles.settingRow}>
               <View style={styles.settingLeft}>
                 <View style={[styles.settingIcon, { backgroundColor: colors.errorLight }]}>
                   <Lock size={18} color={colors.error} />
                 </View>
                 <View>
-                  <Text style={styles.settingTitle}>{t('settings.changePassword')}</Text>
-                  <Text style={styles.settingSubtitle}>{t('settings.accountSecurity')}</Text>
+                  <Text style={[styles.settingTitle, { color: themeColors.textPrimary }]}>{t('settings.changePassword')}</Text>
+                  <Text style={[styles.settingSubtitle, { color: themeColors.textSecondary }]}>{t('settings.accountSecurity')}</Text>
                 </View>
               </View>
               <ChevronRight size={20} color={colors.textTertiary} />
@@ -104,16 +105,16 @@ const AdminSettings = () => {
 
         {/* Dil */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('settings.languageRegion')}</Text>
-          <View style={styles.settingCard}>
+          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>{t('settings.languageRegion')}</Text>
+          <View style={[styles.settingCard, { backgroundColor: themeColors.background, borderColor: themeColors.border }]}>
             <Pressable style={styles.settingRow} onPress={() => setShowLanguageModal(true)}>
               <View style={styles.settingLeft}>
                 <View style={[styles.settingIcon, { backgroundColor: colors.successLight }]}>
                   <Globe size={18} color={colors.success} />
                 </View>
                 <View>
-                  <Text style={styles.settingTitle}>{t('profile.language')}</Text>
-                  <Text style={styles.settingSubtitle}>{getCurrentLanguageName()}</Text>
+                  <Text style={[styles.settingTitle, { color: themeColors.textPrimary }]}>{t('profile.language')}</Text>
+                  <Text style={[styles.settingSubtitle, { color: themeColors.textSecondary }]}>{getCurrentLanguageName()}</Text>
                 </View>
               </View>
               <ChevronRight size={20} color={colors.textTertiary} />
@@ -178,7 +179,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     padding: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
@@ -219,7 +220,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   settingCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.card,
     borderWidth: 1,
     borderColor: colors.border,
@@ -259,7 +260,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: 40,

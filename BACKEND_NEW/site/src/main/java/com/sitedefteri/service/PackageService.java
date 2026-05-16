@@ -105,6 +105,7 @@ public class PackageService {
         pkg.setPhotoUrl(request.getPhotoUrl());
         pkg.setBlockId(request.getBlockId());
         pkg.setSiteId(request.getSiteId());
+        pkg.setDeliveryCode(request.getDeliveryCode()); // Optional delivery code from courier
         pkg.setStatus("beklemede");
         pkg.setRecordedAt(LocalDateTime.now());
         
@@ -315,6 +316,9 @@ public class PackageService {
         response.setAiExtracted(pkg.getAiExtracted());
         response.setAiExtractionLogId(pkg.getAiExtractionLogId());
         response.setMatchedNotificationId(pkg.getMatchedNotificationId());
+        
+        // Delivery Code
+        response.setDeliveryCode(pkg.getDeliveryCode());
         
         // NOT: recorded_by ve delivered_to dahil edilmez (KVKK)
         // Sadece admin endpoint'inde gösterilir
@@ -798,6 +802,12 @@ public class PackageService {
                 pkg.setMatchedNotificationId(matchingResult.getNotificationId());
                 pkg.setStatus("waiting"); // Waiting for resident pickup
                 
+                // Copy delivery code from notification if present
+                if (matchingResult.getDeliveryCode() != null && !matchingResult.getDeliveryCode().isEmpty()) {
+                    pkg.setDeliveryCode(matchingResult.getDeliveryCode());
+                    log.info("Delivery code copied from notification: {}", matchingResult.getDeliveryCode());
+                }
+                
                 // Generate unique QR token for this package (not resident's QR)
                 // Resident's QR will be validated at collection time
                 String packageQrToken = java.util.UUID.randomUUID().toString();
@@ -888,7 +898,8 @@ public class PackageService {
                     request.getApartmentId(),
                     request.getFullName(),
                     request.getCargoCompany(),
-                    request.getExpectedDate()
+                    request.getExpectedDate(),
+                    request.getDeliveryCode()  // Pass delivery code
                 );
             
             log.info("Resident notification created with ID: {}", notification.getId());

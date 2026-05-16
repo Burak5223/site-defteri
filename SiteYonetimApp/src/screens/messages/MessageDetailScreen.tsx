@@ -40,7 +40,7 @@ const MessageDetailScreen = ({ route }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.backgroundSecondary,
   },
   card: {
     margin: spacing.md,
@@ -90,3 +90,4 @@ const styles = StyleSheet.create({
 });
 
 export default MessageDetailScreen;
+

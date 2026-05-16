@@ -25,5 +25,7 @@ public class ResidentNotificationRequest {
 
     private String expectedDate; // Format: YYYY-MM-DD
     
+    private String deliveryCode; // Optional delivery code from cargo company (max 50 chars)
+    
     private String notes; // Optional notes
 }

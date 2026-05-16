@@ -26,12 +26,15 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { apiClient } from '../../api/apiClient';
-import { lightTheme } from '../../theme';
+import { colors, lightTheme } from '../../theme';
+import { useTheme } from '../../context/ThemeContext';
 import { useI18n } from '../../context/I18nContext';
 
 const MaintenanceManagementScreen = () => {
   const { t } = useI18n();
   const { user, hasRole } = useAuth();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [equipment, setEquipment] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -160,7 +163,7 @@ const MaintenanceManagementScreen = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={lightTheme.colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -172,24 +175,24 @@ const MaintenanceManagementScreen = () => {
         <View style={styles.siteSelector}>
           <View style={styles.siteSelectorLeft}>
             <View style={styles.siteIcon}>
-              <Building size={16} color={lightTheme.colors.primary} />
+              <Building size={16} color={colors.primary} />
             </View>
             <View>
               <Text style={styles.siteLabel}>{t('ui.siteName')}</Text>
               <Text style={styles.siteSubLabel}>{t('dashboard.admin')}</Text>
             </View>
           </View>
-          <ChevronDown size={20} color="#64748b" />
+          <ChevronDown size={20} color={colors.textSecondary} />
         </View>
         <Pressable style={styles.settingsButton}>
-          <Settings size={20} color="#64748b" />
+          <Settings size={20} color={colors.textSecondary} />
         </Pressable>
       </View>
 
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[lightTheme.colors.primary]} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
       >
         {/* Title */}
         <View style={styles.titleRow}>
@@ -202,28 +205,28 @@ const MaintenanceManagementScreen = () => {
         {/* Equipment List */}
         {equipment.length === 0 ? (
           <View style={styles.emptyState}>
-            <Wrench size={48} color="#cbd5e1" />
+            <Wrench size={48} color={colors.textDisabled} />
             <Text style={styles.emptyText}>{t('maintenanceManagement.noEquipment')}</Text>
           </View>
         ) : (
           equipment.map((item) => {
-            const colors = getStatusColors(item.status);
-            const StatusIcon = colors.icon;
+            const statusColors = getStatusColors(item.status);
+            const StatusIcon = statusColors.icon;
 
             return (
               <View key={item.id} style={styles.card}>
                 <View style={styles.cardHeader}>
                   <View style={styles.cardLeft}>
-                    <View style={[styles.iconBox, { backgroundColor: colors.bg }]}>
-                      <StatusIcon size={20} color={colors.color} />
+                    <View style={[styles.iconBox, { backgroundColor: statusColors.bg }]}>
+                      <StatusIcon size={20} color={statusColors.color} />
                     </View>
                     <View style={styles.cardInfo}>
                       <Text style={styles.cardTitle}>{item.name}</Text>
                       <Text style={styles.cardType}>{item.type}</Text>
                     </View>
                   </View>
-                  <View style={[styles.statusBadge, { backgroundColor: colors.bg }]}>
-                    <Text style={[styles.statusText, { color: colors.color }]}>{item.status}</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
+                    <Text style={[styles.statusText, { color: statusColors.color }]}>{item.status}</Text>
                   </View>
                 </View>
 
@@ -271,7 +274,7 @@ const MaintenanceManagementScreen = () => {
               <Text style={styles.modalTitle}>{t('maintenanceManagement.newEquipment')}</Text>
               <Text style={styles.modalSubtitle}>{t('maintenanceManagement.newEquipmentSubtitle')}</Text>
               <Pressable style={styles.closeButton} onPress={() => { setShowAddModal(false); resetForm(); }}>
-                <X size={24} color="#64748b" />
+                <X size={24} color={colors.textSecondary} />
               </Pressable>
             </View>
 
@@ -289,7 +292,7 @@ const MaintenanceManagementScreen = () => {
                   value={equipmentName}
                   onChangeText={setEquipmentName}
                   placeholder={t('maintenanceManagement.equipmentNamePlaceholder')}
-                  placeholderTextColor="#94a3b8"
+                  placeholderTextColor={colors.textTertiary}
                 />
               </View>
 
@@ -300,7 +303,7 @@ const MaintenanceManagementScreen = () => {
                   onPress={() => setShowTypeDropdown(!showTypeDropdown)}
                 >
                   <Text style={styles.selectText}>{equipmentType}</Text>
-                  <ChevronDown size={16} color="#64748b" />
+                  <ChevronDown size={16} color={colors.textSecondary} />
                 </Pressable>
                 {showTypeDropdown && (
                   <View style={styles.dropdown}>
@@ -332,7 +335,7 @@ const MaintenanceManagementScreen = () => {
                   value={lastMaintenanceDate}
                   onChangeText={setLastMaintenanceDate}
                   placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#94a3b8"
+                  placeholderTextColor={colors.textTertiary}
                 />
               </View>
 
@@ -343,7 +346,7 @@ const MaintenanceManagementScreen = () => {
                   onPress={() => setShowPeriodDropdown(!showPeriodDropdown)}
                 >
                   <Text style={styles.selectText}>{maintenancePeriod}</Text>
-                  <ChevronDown size={16} color="#64748b" />
+                  <ChevronDown size={16} color={colors.textSecondary} />
                 </Pressable>
                 {showPeriodDropdown && (
                   <View style={styles.dropdown}>
@@ -375,7 +378,7 @@ const MaintenanceManagementScreen = () => {
                   value={notes}
                   onChangeText={setNotes}
                   placeholder={t('maintenanceManagement.maintenanceDetails')}
-                  placeholderTextColor="#94a3b8"
+                  placeholderTextColor={colors.textTertiary}
                   multiline
                   numberOfLines={3}
                 />
@@ -403,10 +406,10 @@ const MaintenanceManagementScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.backgroundSecondary,
   },
   loadingContainer: {
     flex: 1,
@@ -420,9 +423,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: colors.borderLight,
   },
   siteSelector: {
     flexDirection: 'row',
@@ -446,7 +449,7 @@ const styles = StyleSheet.create({
   siteLabel: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#020617',
+    color: colors.textPrimary,
   },
   siteSubLabel: {
     fontSize: 12,
@@ -456,7 +459,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.backgroundSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -478,7 +481,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#020617',
+    color: colors.textPrimary,
   },
   subtitle: {
     fontSize: 12,
@@ -486,12 +489,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: colors.borderLight,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -518,7 +521,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#020617',
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   cardType: {
@@ -552,12 +555,12 @@ const styles = StyleSheet.create({
   dateValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#020617',
+    color: colors.textPrimary,
   },
   cardFooter: {
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
+    borderTopColor: colors.borderLight,
   },
   daysText: {
     fontSize: 12,
@@ -584,7 +587,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     maxHeight: '85%',
@@ -592,12 +595,12 @@ const styles = StyleSheet.create({
   modalHeader: {
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: colors.borderLight,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#020617',
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   modalSubtitle: {
@@ -619,7 +622,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#020617',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   input: {
@@ -628,8 +631,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     fontSize: 14,
-    color: '#020617',
-    backgroundColor: '#ffffff',
+    color: colors.textPrimary,
+    backgroundColor: colors.background,
   },
   textArea: {
     height: 80,
@@ -644,15 +647,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
   },
   selectText: {
     fontSize: 14,
-    color: '#020617',
+    color: colors.textPrimary,
   },
   dropdown: {
     marginTop: 4,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#e2e8f0',
@@ -667,14 +670,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: colors.borderLight,
   },
   dropdownItemText: {
     fontSize: 14,
-    color: '#475569',
+    color: colors.textSecondary,
   },
   dropdownItemTextActive: {
-    color: lightTheme.colors.primary,
+    color: colors.primary,
     fontWeight: '600',
   },
   modalFooter: {
@@ -682,7 +685,7 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
+    borderTopColor: colors.borderLight,
   },
   button: {
     flex: 1,
@@ -692,17 +695,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonSecondary: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
   buttonSecondaryText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#475569',
+    color: colors.textSecondary,
   },
   buttonPrimary: {
-    backgroundColor: lightTheme.colors.primary,
+    backgroundColor: colors.primary,
   },
   buttonPrimaryText: {
     fontSize: 15,
@@ -715,7 +718,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
   },
@@ -724,10 +727,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: lightTheme.colors.primary,
+    backgroundColor: colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
-    shadowColor: lightTheme.colors.primary,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -741,3 +744,10 @@ const styles = StyleSheet.create({
 });
 
 export default MaintenanceManagementScreen;
+
+
+
+
+
+
+

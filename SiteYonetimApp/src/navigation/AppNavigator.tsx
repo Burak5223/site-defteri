@@ -1,21 +1,23 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useAuth } from '../context/AuthContext';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 import SuperAdminNavigator from './SuperAdminNavigator';
 import { ActivityIndicator, View } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
 const Stack = createStackNavigator();
 
 const AppNavigator = () => {
   const { isAuthenticated, isLoading, user, hasRole, isImpersonating } = useAuth();
+  const { colors, isDarkMode } = useTheme();
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#2563eb" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.backgroundSecondary }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -45,8 +47,21 @@ const AppNavigator = () => {
     return <MainNavigator />;
   };
 
+  const navigationTheme = {
+    ...(isDarkMode ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(isDarkMode ? DarkTheme.colors : DefaultTheme.colors),
+      primary: colors.primary,
+      background: colors.backgroundSecondary,
+      card: colors.background,
+      text: colors.textPrimary,
+      border: colors.border,
+      notification: colors.error,
+    },
+  };
+
   return (
-    <NavigationContainer key={navigationKey}>
+    <NavigationContainer key={navigationKey} theme={navigationTheme}>
       {isAuthenticated ? getMainNavigator() : <AuthNavigator />}
     </NavigationContainer>
   );

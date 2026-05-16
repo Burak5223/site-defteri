@@ -26,7 +26,8 @@ import { useNotifications } from '../../context/NotificationContext';
 import { apiClient } from '../../api/apiClient';
 import { messageService, Message } from '../../services/message.service';
 import { siteService, Block } from '../../services/site.service';
-import { lightTheme } from '../../theme';
+import { colors, lightTheme } from '../../theme';
+import { useTheme } from '../../context/ThemeContext';
 import { useI18n } from '../../context/I18nContext';
 
 type ChatView = 'list' | 'group' | 'direct-chat' | 'apartment-chat' | 'system-chat' | 'block-view';
@@ -63,6 +64,8 @@ export const getTotalUnreadCount = (messages: Message[], userId: string): number
 const MessagesScreen = ({ navigation }: any) => {
   const { t } = useI18n();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const { refreshUnreadMessages } = useNotifications();
   const [chatView, setChatView] = useState<ChatView>('list');
   const [messageText, setMessageText] = useState('');
@@ -1240,10 +1243,10 @@ const MessagesScreen = ({ navigation }: any) => {
 
 export default MessagesScreen;
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.backgroundSecondary,
   },
   flexContainer: {
     flex: 1,
@@ -1252,24 +1255,24 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.backgroundSecondary,
   },
   listHeader: {
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: colors.border,
   },
   listHeaderTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#020617',
+    color: colors.textPrimary,
   },
   listScroll: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.backgroundSecondary,
   },
   listScrollContent: {
     paddingHorizontal: 20,
@@ -1279,7 +1282,7 @@ const styles = StyleSheet.create({
   },
   chatCard: {
     borderRadius: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1357,17 +1360,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 12,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.backgroundSecondary,
   },
   searchInput: {
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 15,
-    color: '#020617',
-    backgroundColor: '#ffffff',
+    color: colors.textPrimary,
+    backgroundColor: colors.background,
   },
   chatInfo: {
     flex: 1,
@@ -1375,7 +1378,7 @@ const styles = StyleSheet.create({
   chatTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#020617',
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   chatSubtitle: {
@@ -1409,8 +1412,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    backgroundColor: '#ffffff',
+    borderBottomColor: colors.border,
+    backgroundColor: colors.background,
   },
   headerBackButton: {
     width: 44,
@@ -1419,7 +1422,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 8,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.backgroundSecondary,
   },
   chatHeaderIconPrimary: {
     width: 44,
@@ -1477,7 +1480,7 @@ const styles = StyleSheet.create({
   chatHeaderTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#020617',
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   chatHeaderSubtitle: {
@@ -1502,7 +1505,7 @@ const styles = StyleSheet.create({
   },
   messagesScroll: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.backgroundSecondary,
   },
   messagesScrollContent: {
     paddingHorizontal: 20,
@@ -1519,7 +1522,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.backgroundTertiary,
   },
   messageRow: {
     flexDirection: 'row',
@@ -1571,7 +1574,7 @@ const styles = StyleSheet.create({
   },
   messageText: {
     fontSize: 13,
-    color: '#020617',
+    color: colors.textPrimary,
   },
   messageTime: {
     fontSize: 10,
@@ -1591,20 +1594,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-    backgroundColor: '#ffffff',
+    borderTopColor: colors.border,
+    backgroundColor: colors.background,
     marginBottom: 0,
   },
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     borderRadius: 24,
     paddingHorizontal: 18,
     paddingVertical: 12,
     fontSize: 15,
-    color: '#020617',
-    backgroundColor: '#f9fafb',
+    color: colors.textPrimary,
+    backgroundColor: colors.backgroundSecondary,
     marginRight: 12,
   },
   sendButton: {
@@ -1663,7 +1666,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -1678,7 +1681,7 @@ const styles = StyleSheet.create({
   blockDropdownContainer: {
     marginHorizontal: 20,
     marginVertical: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1696,7 +1699,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   blockAccordionItem: {
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
     marginBottom: 8,
     padding: 14,
@@ -1711,3 +1714,6 @@ const styles = StyleSheet.create({
     marginRight: 14,
   },
 });
+
+
+

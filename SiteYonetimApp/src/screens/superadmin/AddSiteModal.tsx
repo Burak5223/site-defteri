@@ -13,7 +13,7 @@ import {
 import { X, Building2, MapPin, Phone, Mail } from 'lucide-react-native';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
 import { useI18n } from '../../context/I18nContext';
-import { apiClient } from '../../api/apiClient';
+import { siteService } from '../../services/site.service';
 
 interface AddSiteModalProps {
   visible: boolean;
@@ -43,7 +43,7 @@ const AddSiteModal: React.FC<AddSiteModalProps> = ({ visible, onClose, onSuccess
 
     setLoading(true);
     try {
-      await apiClient.post('/sites', formData);
+      await siteService.createSite(formData);
       Alert.alert(t('common.success'), 'Site başarıyla eklendi');
       onSuccess();
       onClose();
@@ -67,7 +67,14 @@ const AddSiteModal: React.FC<AddSiteModalProps> = ({ visible, onClose, onSuccess
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      presentationStyle="overFullScreen"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
           {/* Header */}
@@ -248,7 +255,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
-    maxHeight: '90%',
+    height: '90%',
   },
   modalHeader: {
     flexDirection: 'row',

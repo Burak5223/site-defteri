@@ -29,7 +29,7 @@ import {
   Check,
 } from 'lucide-react-native';
 import { apiClient } from '../../api/apiClient';
-import { spacing, fontSize, lightTheme } from '../../theme';
+import { colors, spacing, fontSize, lightTheme } from '../../theme';
 import { useAuth } from '../../context/AuthContext';
 import { useI18n } from '../../context/I18nContext';
 import { siteService, Block } from '../../services/site.service';
@@ -608,7 +608,7 @@ const ResidentsScreen = () => {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.backgroundSecondary,
   },
   loadingContainer: {
     flex: 1,
@@ -620,9 +620,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     paddingTop: Platform.OS === 'ios' ? 60 : 20,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: colors.borderLight,
     gap: 12,
   },
   searchContainer: {
@@ -644,7 +644,7 @@ const styles = StyleSheet.create({
   filterButton: {
     width: 48,
     height: 48,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: '#e2e8f0',
     borderRadius: 12,
@@ -678,7 +678,7 @@ const styles = StyleSheet.create({
   },
   statChip: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: '#e2e8f0',
     borderRadius: 12,
@@ -701,12 +701,12 @@ const styles = StyleSheet.create({
   },
   card: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     padding: 16,
     borderRadius: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: colors.borderLight,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.02,
@@ -822,7 +822,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     height: '85%',
@@ -836,7 +836,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: colors.borderLight,
   },
   dragHandle: {
     width: 48,
@@ -875,10 +875,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   infoGroup: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: colors.borderLight,
     padding: 20,
     marginBottom: 20,
   },
@@ -898,7 +898,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.backgroundSecondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
@@ -948,7 +948,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     marginTop: 4,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     color: '#0f172a',
   },
   typeSelectObj: {
@@ -959,7 +959,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   typeSelectObjActive: {
     borderColor: '#0f766e',
@@ -1023,9 +1023,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderRadius: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: colors.borderLight,
     marginBottom: 8,
   },
   blockOptionActive: {
@@ -1044,3 +1044,5 @@ const styles = StyleSheet.create({
 });
 
 export default ResidentsScreen;
+
+

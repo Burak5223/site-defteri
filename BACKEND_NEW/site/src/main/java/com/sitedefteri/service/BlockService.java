@@ -29,7 +29,7 @@ public class BlockService {
     
     @Transactional(readOnly = true)
     public List<BlockResponse> getBlocksBySite(String siteId) {
-        return blockRepository.findBySiteId(siteId).stream()
+        return blockRepository.findBySiteIdAndIsDeletedFalseOrderByNameAsc(siteId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }

@@ -25,6 +25,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import Svg, { Line, Circle, Text as SvgText, Polyline } from 'react-native-svg';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
+import { useTheme } from '../../context/ThemeContext';
 import { financeService, Income, Expense } from '../../services/finance.service';
 import { paymentService, Payment } from '../../services/payment.service';
 import { useAuth } from '../../context/AuthContext';
@@ -52,6 +53,8 @@ const chartHeight = 180;
 const AdminFinance = () => {
   const { t } = useI18n();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [pendingPayments, setPendingPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -672,7 +675,7 @@ const AdminFinance = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.backgroundSecondary,
@@ -685,7 +688,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     padding: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
@@ -732,7 +735,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: borderRadius.icon,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
@@ -761,7 +764,7 @@ const styles = StyleSheet.create({
   transactionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.card,
     padding: spacing.lg,
     borderWidth: 1,
@@ -798,7 +801,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
   },
   chartCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.card,
     padding: spacing.lg,
     marginBottom: spacing.xl,
@@ -839,7 +842,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
     padding: spacing.screenPaddingHorizontal,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
@@ -863,7 +866,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     maxHeight: '80%',
@@ -904,7 +907,7 @@ const styles = StyleSheet.create({
     padding: spacing.inputPaddingHorizontal,
     fontSize: fontSize.inputText,
     color: colors.textPrimary,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
   },
   modalFooter: {
     flexDirection: 'row',
@@ -942,7 +945,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   pendingPaymentCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.card,
     padding: spacing.lg,
     borderWidth: 1,
@@ -1018,3 +1021,6 @@ const styles = StyleSheet.create({
 });
 
 export default AdminFinance;
+
+
+

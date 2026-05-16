@@ -23,12 +23,15 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
+import { useTheme } from '../../context/ThemeContext';
 import { announcementService, Announcement } from '../../services/announcement.service';
 import { useI18n } from '../../context/I18nContext';
 
 function AdminAnnouncements() {
   const { t } = useI18n();
   const { hasRole, user } = useAuth();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -262,7 +265,7 @@ function AdminAnnouncements() {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.backgroundSecondary,
@@ -310,7 +313,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
   card: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.card,
     padding: spacing.lg,
     marginBottom: spacing.rowGap,
@@ -383,7 +386,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     maxHeight: '85%',
@@ -428,7 +431,7 @@ const styles = StyleSheet.create({
     padding: spacing.inputPaddingHorizontal,
     fontSize: fontSize.inputText,
     color: colors.textPrimary,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
   },
   textArea: {
     height: 100,
@@ -443,7 +446,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.input,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
   },
   selectText: {
     fontSize: fontSize.inputText,
@@ -484,3 +487,6 @@ const styles = StyleSheet.create({
 });
 
 export default AdminAnnouncements;
+
+
+

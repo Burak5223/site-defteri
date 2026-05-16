@@ -1,23 +1,24 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Railway Production URL
-const RAILWAY_URL = 'https://site-yonetim-production.up.railway.app/api';
+const RAILWAY_URL = "https://site-yonetim-production.up.railway.app/api";
 
 // Dinamik IP - geliştirme sırasında değiştirilebilir
 const BACKEND_IPS = [
-  '192.168.1.5',     // Local PC IP (Okul ağında) - BACKUP
-  '192.168.125.211',   // Hotspot IP - BACKUP
-  '10.50.19.185',     // Eduroam IP - BACKUP
-  '10.60.24.180',    // Current Wi-Fi IP - PRIMARY 
-  '10.0.0.136',      // Local PC IP - BACKUP
-  '172.29.1.55',     // Ana Sunucu IP (Eduroam ağında) - BACKUP
-  '10.60.24.246',    // Windows PC IP - BACKUP
-  '192.168.70.211',  // Local Wi-Fi IP - BACKUP
+  "192.168.1.5", // Local PC IP (Okul ağında) - BACKUP
+  "10.0.2.2", //emülator
+  "10.60.25.28", // Current Wi-Fi IP - PRIMARY
+  "192.168.205.211", // Hotspot IP - BACKUP
+  "10.50.19.185", // Eduroam IP - BACKUP
+  "10.0.0.136", // Local PC IP - BACKUP
+  "172.29.1.55", // Ana Sunucu IP (Eduroam ağında) - BACKUP
+  "10.60.24.246", // Windows PC IP - BACKUP
+  "192.168.70.211", // Local Wi-Fi IP - BACKUP
 ];
 
-const API_BASE_URL = __DEV__ 
-  ? `http://${BACKEND_IPS[0]}:8080/api`  // Development - Local
-  : RAILWAY_URL;  // Production - Railway
+const API_BASE_URL = __DEV__
+  ? `http://${BACKEND_IPS[0]}:8080/api` // Development - Local
+  : RAILWAY_URL; // Production - Railway
 
 interface RequestConfig {
   headers?: Record<string, string>;
@@ -30,23 +31,25 @@ class ApiClient {
     method: string,
     data?: any,
     config?: RequestConfig,
-    retryCount: number = 0
+    retryCount: number = 0,
   ): Promise<T> {
-    const token = await AsyncStorage.getItem('accessToken');
-    
+    const token = await AsyncStorage.getItem("accessToken");
+
     // İlk denemede ana IP, sonraki denemelerde alternatif IP'leri kullan
     let baseUrl = API_BASE_URL;
     if (retryCount > 0 && retryCount < BACKEND_IPS.length) {
       baseUrl = `http://${BACKEND_IPS[retryCount]}:8080/api`;
     }
-    
+
     const fullUrl = `${baseUrl}${url}`;
 
-    console.log(`API Request: ${method} ${url} (attempt ${retryCount + 1}) - IP: ${BACKEND_IPS[retryCount] || BACKEND_IPS[0]}`);
+    console.log(
+      `API Request: ${method} ${url} (attempt ${retryCount + 1}) - IP: ${BACKEND_IPS[retryCount] || BACKEND_IPS[0]}`,
+    );
     console.log(`🎯 Trying IP: ${baseUrl}`);
 
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...config?.headers,
     };
 
@@ -59,78 +62,104 @@ class ApiClient {
       headers,
     };
 
-    if (data && method !== 'GET') {
+    if (data && method !== "GET") {
       options.body = JSON.stringify(data);
       console.log(`API Request Body:`, JSON.stringify(data, null, 2));
     }
 
     try {
       console.log(`🚀 API Request starting: ${method} ${fullUrl}`);
-      
+
       // AI cargo photo upload için özel timeout (60 saniye), diğerleri için 45 saniye
-      const isAICargoUpload = url.includes('/packages/upload-cargo-photo');
+      const isAICargoUpload = url.includes("/packages/upload-cargo-photo");
       const timeoutDuration = isAICargoUpload ? 60000 : 45000;
-      
+
       if (isAICargoUpload) {
-        console.log(`⏱️ AI Cargo Upload detected - using extended timeout: ${timeoutDuration}ms`);
+        console.log(
+          `⏱️ AI Cargo Upload detected - using extended timeout: ${timeoutDuration}ms`,
+        );
       } else {
-        console.log(`⏱️ Using standard timeout: ${timeoutDuration}ms (45 seconds)`);
+        console.log(
+          `⏱️ Using standard timeout: ${timeoutDuration}ms (45 seconds)`,
+        );
       }
-      
+
       // Timeout için Promise.race kullan
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Request timeout')), timeoutDuration)
+        setTimeout(() => reject(new Error("Request timeout")), timeoutDuration),
       );
 
-      const response = await Promise.race([
+      const response = (await Promise.race([
         fetch(fullUrl, options),
-        timeoutPromise
-      ]) as Response;
+        timeoutPromise,
+      ])) as Response;
 
-      console.log(`📡 Response received: ${response.status} ${response.statusText}`);
+      console.log(
+        `📡 Response received: ${response.status} ${response.statusText}`,
+      );
 
       if (response.status === 401) {
-        const refreshToken = await AsyncStorage.getItem('refreshToken');
+        const refreshToken = await AsyncStorage.getItem("refreshToken");
         if (refreshToken) {
           try {
-            const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ refreshToken }),
-            });
+            const refreshResponse = await fetch(
+              `${API_BASE_URL}/auth/refresh`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ refreshToken }),
+              },
+            );
 
             if (refreshResponse.ok) {
               const refreshData = await refreshResponse.json();
-              await AsyncStorage.setItem('accessToken', refreshData.accessToken);
-              await AsyncStorage.setItem('refreshToken', refreshData.refreshToken);
+              await AsyncStorage.setItem(
+                "accessToken",
+                refreshData.accessToken,
+              );
+              await AsyncStorage.setItem(
+                "refreshToken",
+                refreshData.refreshToken,
+              );
 
               headers.Authorization = `Bearer ${refreshData.accessToken}`;
-              const retryResponse = await fetch(fullUrl, { ...options, headers });
-              
+              const retryResponse = await fetch(fullUrl, {
+                ...options,
+                headers,
+              });
+
               if (!retryResponse.ok) {
                 throw new Error(`HTTP ${retryResponse.status}`);
               }
-              
+
               // Content-Type kontrolü
-              const retryContentType = retryResponse.headers.get('content-type');
-              if (!retryContentType || !retryContentType.includes('application/json')) {
+              const retryContentType =
+                retryResponse.headers.get("content-type");
+              if (
+                !retryContentType ||
+                !retryContentType.includes("application/json")
+              ) {
                 const text = await retryResponse.text();
-                if (!text || text.trim() === '') return null as any;
+                if (!text || text.trim() === "") return null as any;
                 try {
                   return JSON.parse(text);
                 } catch (e) {
                   return text as any;
                 }
               }
-              
+
               return await retryResponse.json();
             }
           } catch (refreshError) {
-            await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'user']);
+            await AsyncStorage.multiRemove([
+              "accessToken",
+              "refreshToken",
+              "user",
+            ]);
             throw refreshError;
           }
         }
-        throw new Error('Unauthorized');
+        throw new Error("Unauthorized");
       }
 
       if (!response.ok) {
@@ -151,13 +180,13 @@ class ApiClient {
       }
 
       // Content-Type kontrolü yap
-      const contentType = response.headers.get('content-type');
-      
+      const contentType = response.headers.get("content-type");
+
       // Eğer JSON değilse veya boş response ise
-      if (!contentType || !contentType.includes('application/json')) {
+      if (!contentType || !contentType.includes("application/json")) {
         const text = await response.text();
         // Boş response ise null dön
-        if (!text || text.trim() === '') {
+        if (!text || text.trim() === "") {
           return null as any;
         }
         // JSON parse etmeyi dene
@@ -174,18 +203,24 @@ class ApiClient {
       return responseText ? JSON.parse(responseText) : (null as any);
     } catch (error) {
       console.error(`❌ API Error ${url} (attempt ${retryCount + 1}):`, error);
-      
+
       // Retry logic - farklı IP'leri dene
       if (retryCount < BACKEND_IPS.length - 1 && error instanceof Error) {
-        if (error.message.includes('timeout') || error.message.includes('Network') || error.message.includes('fetch')) {
-          console.log(`🔄 Retrying with different IP... (${retryCount + 2}/${BACKEND_IPS.length})`);
-          await new Promise(resolve => setTimeout(resolve, 1000));
+        if (
+          error.message.includes("timeout") ||
+          error.message.includes("Network") ||
+          error.message.includes("fetch")
+        ) {
+          console.log(
+            `🔄 Retrying with different IP... (${retryCount + 2}/${BACKEND_IPS.length})`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, 1000));
           return this.request(url, method, data, config, retryCount + 1);
         }
       }
-      
+
       // 403 hatalarını sessizce yakala
-      if (error instanceof Error && !error.message.includes('HTTP 403')) {
+      if (error instanceof Error && !error.message.includes("HTTP 403")) {
         console.error(`API Error ${url}:`, error);
       }
       throw error;
@@ -193,23 +228,23 @@ class ApiClient {
   }
 
   async get<T>(url: string, config?: RequestConfig): Promise<T> {
-    return this.request<T>(url, 'GET', undefined, config);
+    return this.request<T>(url, "GET", undefined, config);
   }
 
   async post<T>(url: string, data?: any, config?: RequestConfig): Promise<T> {
-    return this.request<T>(url, 'POST', data, config);
+    return this.request<T>(url, "POST", data, config);
   }
 
   async put<T>(url: string, data?: any, config?: RequestConfig): Promise<T> {
-    return this.request<T>(url, 'PUT', data, config);
+    return this.request<T>(url, "PUT", data, config);
   }
 
   async delete<T>(url: string, config?: RequestConfig): Promise<T> {
-    return this.request<T>(url, 'DELETE', undefined, config);
+    return this.request<T>(url, "DELETE", undefined, config);
   }
 
   async patch<T>(url: string, data?: any, config?: RequestConfig): Promise<T> {
-    return this.request<T>(url, 'PATCH', data, config);
+    return this.request<T>(url, "PATCH", data, config);
   }
 }
 

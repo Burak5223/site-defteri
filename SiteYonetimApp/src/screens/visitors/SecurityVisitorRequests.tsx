@@ -14,10 +14,13 @@ import { Ionicons } from '@expo/vector-icons';
 import visitorRequestService, { VisitorRequest } from '../../services/visitorRequest.service';
 import { useAuth } from '../../context/AuthContext';
 import { useI18n } from '../../context/I18nContext';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function SecurityVisitorRequests() {
   const { user } = useAuth();
   const { t } = useI18n();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState<VisitorRequest[]>([]);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
@@ -92,11 +95,11 @@ export default function SecurityVisitorRequests() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return '#FFA500';
-      case 'approved': return '#4CAF50';
-      case 'rejected': return '#F44336';
-      case 'cancelled': return '#9E9E9E';
-      default: return '#757575';
+      case 'pending': return colors.warning;
+      case 'approved': return colors.success;
+      case 'rejected': return colors.error;
+      case 'cancelled': return colors.textTertiary;
+      default: return colors.textSecondary;
     }
   };
 
@@ -129,7 +132,7 @@ export default function SecurityVisitorRequests() {
   if (loading && requests.length === 0) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#2196F3" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -178,7 +181,7 @@ export default function SecurityVisitorRequests() {
       <ScrollView style={styles.content}>
         {requests.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Ionicons name="people-outline" size={64} color="#ccc" />
+            <Ionicons name="people-outline" size={64} color={colors.textDisabled} />
             <Text style={styles.emptyText}>
               {filter === 'pending' ? 'Bekleyen talep yok' : 'Talep bulunamadı'}
             </Text>
@@ -244,14 +247,14 @@ export default function SecurityVisitorRequests() {
                       style={styles.approveButton}
                       onPress={() => handleReview(request, 'approve')}
                     >
-                      <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                      <Ionicons name="checkmark-circle" size={20} color="#ffffff" />
                       <Text style={styles.approveButtonText}>Onayla</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.rejectButton}
                       onPress={() => handleReview(request, 'reject')}
                     >
-                      <Ionicons name="close-circle" size={20} color="#fff" />
+                      <Ionicons name="close-circle" size={20} color="#ffffff" />
                       <Text style={styles.rejectButtonText}>Reddet</Text>
                     </TouchableOpacity>
                   </>
@@ -273,7 +276,7 @@ export default function SecurityVisitorRequests() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Talep Detayı</Text>
               <TouchableOpacity onPress={() => setSelectedRequest(null)}>
-                <Ionicons name="close" size={28} color="#333" />
+                <Ionicons name="close" size={28} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
 
@@ -362,7 +365,7 @@ export default function SecurityVisitorRequests() {
                       setReviewAction('approve');
                     }}
                   >
-                    <Ionicons name="checkmark-circle" size={24} color="#fff" />
+                    <Ionicons name="checkmark-circle" size={24} color="#ffffff" />
                     <Text style={styles.modalApproveButtonText}>Onayla</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -372,7 +375,7 @@ export default function SecurityVisitorRequests() {
                       setReviewAction('reject');
                     }}
                   >
-                    <Ionicons name="close-circle" size={24} color="#fff" />
+                    <Ionicons name="close-circle" size={24} color="#ffffff" />
                     <Text style={styles.modalRejectButtonText}>Reddet</Text>
                   </TouchableOpacity>
                 </View>
@@ -427,7 +430,7 @@ export default function SecurityVisitorRequests() {
                 disabled={loading}
               >
                 {loading ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color="#ffffff" />
                 ) : (
                   <Text style={styles.modalButtonText}>
                     {reviewAction === 'approve' ? 'Onayla' : 'Reddet'}
@@ -442,10 +445,10 @@ export default function SecurityVisitorRequests() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundSecondary,
   },
   centerContainer: {
     flex: 1,
@@ -454,21 +457,21 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.textPrimary,
   },
   filterContainer: {
     flexDirection: 'row',
     padding: 12,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   filterButton: {
     flex: 1,
@@ -476,19 +479,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginHorizontal: 4,
     borderRadius: 8,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundSecondary,
     alignItems: 'center',
   },
   filterButtonActive: {
-    backgroundColor: '#2196F3',
+    backgroundColor: colors.primary,
   },
   filterButtonText: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textSecondary,
     fontWeight: '600',
   },
   filterButtonTextActive: {
-    color: '#fff',
+    color: '#ffffff',
   },
   content: {
     flex: 1,
@@ -501,11 +504,11 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    color: '#666',
+    color: colors.textSecondary,
     marginTop: 16,
   },
   requestCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -528,33 +531,33 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   statusText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 12,
     fontWeight: 'bold',
   },
   apartmentBadge: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#2196F3',
+    color: colors.primary,
   },
   residentName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   requestDate: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 6,
   },
   visitorCount: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   notesContainer: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundSecondary,
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
@@ -562,24 +565,24 @@ const styles = StyleSheet.create({
   notesLabel: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   notesText: {
     fontSize: 14,
-    color: '#333',
+    color: colors.textPrimary,
   },
   visitorsList: {
     marginBottom: 12,
   },
   visitorName: {
     fontSize: 14,
-    color: '#333',
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   moreVisitors: {
     fontSize: 14,
-    color: '#2196F3',
+    color: colors.primary,
     fontStyle: 'italic',
   },
   actionButtons: {
@@ -590,11 +593,11 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 12,
     borderRadius: 8,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundSecondary,
     alignItems: 'center',
   },
   detailButtonText: {
-    color: '#333',
+    color: colors.textPrimary,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -609,7 +612,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   approveButtonText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 14,
     fontWeight: 'bold',
   },
@@ -618,19 +621,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 12,
     borderRadius: 8,
-    backgroundColor: '#F44336',
+    backgroundColor: colors.error,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
   },
   rejectButtonText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 14,
     fontWeight: 'bold',
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -638,12 +641,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.textPrimary,
   },
   modalContent: {
     flex: 1,
@@ -655,20 +658,20 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   detailValue: {
     fontSize: 16,
-    color: '#333',
+    color: colors.textPrimary,
   },
   detailSubValue: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textTertiary,
     marginTop: 4,
   },
   visitorDetailCard: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundSecondary,
     padding: 12,
     borderRadius: 8,
     marginTop: 8,
@@ -676,17 +679,17 @@ const styles = StyleSheet.create({
   visitorDetailName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: colors.textPrimary,
     marginBottom: 6,
   },
   visitorDetailInfo: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   visitorDetailNotes: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     fontStyle: 'italic',
     marginTop: 6,
   },
@@ -707,7 +710,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   modalApproveButtonText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -716,13 +719,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     borderRadius: 8,
-    backgroundColor: '#F44336',
+    backgroundColor: colors.error,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
   modalRejectButtonText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -733,28 +736,28 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   reviewModal: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     borderRadius: 12,
     padding: 20,
   },
   reviewModalText: {
     fontSize: 16,
-    color: '#666',
+    color: colors.textSecondary,
     marginVertical: 16,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   textArea: {
     height: 100,
@@ -773,22 +776,26 @@ const styles = StyleSheet.create({
     marginHorizontal: 6,
   },
   modalButtonCancel: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundSecondary,
   },
   modalButtonApprove: {
     backgroundColor: '#4CAF50',
   },
   modalButtonReject: {
-    backgroundColor: '#F44336',
+    backgroundColor: colors.error,
   },
   modalButtonText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
   },
   modalButtonTextCancel: {
-    color: '#666',
+    color: colors.textSecondary,
     fontSize: 16,
     fontWeight: 'bold',
   },
 });
+
+
+
+

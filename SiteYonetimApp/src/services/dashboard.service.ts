@@ -74,6 +74,9 @@ export interface ResidentDashboardStats {
   myPackages: number;
   unreadNotifications: number;
   unreadMessages: number;
+  totalTasks?: number;
+  completedTasks?: number;
+  pendingTasks?: number;
 }
 
 class DashboardService {

@@ -16,9 +16,12 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import visitorRequestService, { VisitorItem, VisitorRequest } from '../../services/visitorRequest.service';
 import { useI18n } from '../../context/I18nContext';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function ResidentVisitorRequests() {
   const { t } = useI18n();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState<VisitorRequest[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -207,11 +210,11 @@ export default function ResidentVisitorRequests() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return '#FFA500';
-      case 'approved': return '#4CAF50';
-      case 'rejected': return '#F44336';
-      case 'cancelled': return '#9E9E9E';
-      default: return '#757575';
+      case 'pending': return colors.warning;
+      case 'approved': return colors.success;
+      case 'rejected': return colors.error;
+      case 'cancelled': return colors.textTertiary;
+      default: return colors.textSecondary;
     }
   };
 
@@ -239,7 +242,7 @@ export default function ResidentVisitorRequests() {
   if (loading && requests.length === 0) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#2196F3" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -252,14 +255,14 @@ export default function ResidentVisitorRequests() {
           style={styles.addButton}
           onPress={() => setShowCreateModal(true)}
         >
-          <Ionicons name="add" size={24} color="#fff" />
+          <Ionicons name="add" size={24} color="#ffffff" />
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content}>
         {requests.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Ionicons name="people-outline" size={64} color="#ccc" />
+            <Ionicons name="people-outline" size={64} color={colors.textDisabled} />
             <Text style={styles.emptyText}>Henüz talep oluşturmadınız</Text>
             <Text style={styles.emptySubtext}>
               Ziyaretçi talebi oluşturmak için + butonuna tıklayın
@@ -281,7 +284,7 @@ export default function ResidentVisitorRequests() {
                     onPress={() => handleCancelRequest(request.id)}
                     style={styles.cancelButton}
                   >
-                    <Ionicons name="close-circle" size={24} color="#F44336" />
+                    <Ionicons name="close-circle" size={24} color={colors.error} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -323,7 +326,7 @@ export default function ResidentVisitorRequests() {
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Yeni Ziyaretçi Talebi</Text>
             <TouchableOpacity onPress={() => setShowCreateModal(false)}>
-              <Ionicons name="close" size={28} color="#333" />
+              <Ionicons name="close" size={28} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
 
@@ -333,7 +336,7 @@ export default function ResidentVisitorRequests() {
               style={styles.dateButton}
               onPress={() => setShowDatePicker(true)}
             >
-              <Ionicons name="calendar-outline" size={20} color="#666" />
+              <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
               <Text style={styles.dateButtonText}>
                 {formatDate(expectedDate.toISOString())}
               </Text>
@@ -368,7 +371,7 @@ export default function ResidentVisitorRequests() {
                   </Text>
                 </View>
                 <TouchableOpacity onPress={() => handleRemoveVisitor(index)}>
-                  <Ionicons name="trash-outline" size={20} color="#F44336" />
+                  <Ionicons name="trash-outline" size={20} color={colors.error} />
                 </TouchableOpacity>
               </View>
             ))}
@@ -377,7 +380,7 @@ export default function ResidentVisitorRequests() {
               style={styles.addVisitorButton}
               onPress={() => setShowAddVisitorModal(true)}
             >
-              <Ionicons name="add-circle-outline" size={24} color="#2196F3" />
+              <Ionicons name="add-circle-outline" size={24} color={colors.primary} />
               <Text style={styles.addVisitorButtonText}>Ziyaretçi Ekle</Text>
             </TouchableOpacity>
 
@@ -397,7 +400,7 @@ export default function ResidentVisitorRequests() {
               disabled={visitors.length === 0 || loading}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color="#ffffff" />
               ) : (
                 <Text style={styles.submitButtonText}>Talebi Gönder</Text>
               )}
@@ -455,7 +458,7 @@ export default function ResidentVisitorRequests() {
                 setNewVisitor({ ...newVisitor, stayStartDate: currentDate.toISOString() });
               }}
             >
-              <Ionicons name="calendar-outline" size={20} color="#666" />
+              <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
               <Text style={styles.dateButtonText}>
                 {new Date(newVisitor.stayStartDate).toLocaleDateString('tr-TR', {
                   day: '2-digit',
@@ -474,7 +477,7 @@ export default function ResidentVisitorRequests() {
                   stayDurationDays: Math.max(1, (newVisitor.stayDurationDays || 1) - 1) 
                 })}
               >
-                <Ionicons name="remove-circle-outline" size={32} color="#2196F3" />
+                <Ionicons name="remove-circle-outline" size={32} color={colors.primary} />
               </TouchableOpacity>
               
               <View style={styles.durationDisplay}>
@@ -489,7 +492,7 @@ export default function ResidentVisitorRequests() {
                   stayDurationDays: Math.min(365, (newVisitor.stayDurationDays || 1) + 1) 
                 })}
               >
-                <Ionicons name="add-circle-outline" size={32} color="#2196F3" />
+                <Ionicons name="add-circle-outline" size={32} color={colors.primary} />
               </TouchableOpacity>
             </View>
 
@@ -542,7 +545,7 @@ export default function ResidentVisitorRequests() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Talep Detayı</Text>
               <TouchableOpacity onPress={() => setSelectedRequest(null)}>
-                <Ionicons name="close" size={28} color="#333" />
+                <Ionicons name="close" size={28} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
 
@@ -620,10 +623,10 @@ export default function ResidentVisitorRequests() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundSecondary,
   },
   centerContainer: {
     flex: 1,
@@ -635,17 +638,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.textPrimary,
   },
   addButton: {
-    backgroundColor: '#2196F3',
+    backgroundColor: colors.primary,
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -663,17 +666,17 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    color: '#666',
+    color: colors.textSecondary,
     marginTop: 16,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textTertiary,
     marginTop: 8,
     textAlign: 'center',
   },
   requestCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -696,7 +699,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   statusText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -705,38 +708,38 @@ const styles = StyleSheet.create({
   },
   requestDate: {
     fontSize: 16,
-    color: '#333',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   visitorCount: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   requestNotes: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     fontStyle: 'italic',
   },
   reviewNotesContainer: {
     marginTop: 12,
     padding: 12,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 8,
   },
   reviewNotesLabel: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   reviewNotes: {
     fontSize: 14,
-    color: '#333',
+    color: colors.textPrimary,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -744,12 +747,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.textPrimary,
   },
   modalContent: {
     flex: 1,
@@ -758,17 +761,17 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: colors.textPrimary,
     marginBottom: 8,
     marginTop: 16,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   textArea: {
     height: 100,
@@ -778,14 +781,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 12,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   dateButtonText: {
     fontSize: 16,
-    color: '#333',
+    color: colors.textPrimary,
     marginLeft: 8,
   },
   visitorItem: {
@@ -793,7 +796,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 8,
     marginBottom: 8,
   },
@@ -803,12 +806,12 @@ const styles = StyleSheet.create({
   visitorName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   visitorDetail: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
   },
   addVisitorButton: {
     flexDirection: 'row',
@@ -816,19 +819,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 16,
     borderWidth: 2,
-    borderColor: '#2196F3',
+    borderColor: colors.primary,
     borderRadius: 8,
     borderStyle: 'dashed',
     marginTop: 8,
   },
   addVisitorButtonText: {
     fontSize: 16,
-    color: '#2196F3',
+    color: colors.primary,
     fontWeight: '600',
     marginLeft: 8,
   },
   submitButton: {
-    backgroundColor: '#2196F3',
+    backgroundColor: colors.primary,
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
@@ -836,10 +839,10 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   submitButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: colors.textDisabled,
   },
   submitButtonText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -856,7 +859,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   addVisitorModal: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
@@ -880,18 +883,18 @@ const styles = StyleSheet.create({
     marginHorizontal: 6,
   },
   modalButtonCancel: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundSecondary,
   },
   modalButtonSubmit: {
-    backgroundColor: '#2196F3',
+    backgroundColor: colors.primary,
   },
   modalButtonText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
   },
   modalButtonTextCancel: {
-    color: '#666',
+    color: colors.textSecondary,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -901,20 +904,20 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   detailValue: {
     fontSize: 16,
-    color: '#333',
+    color: colors.textPrimary,
   },
   detailSubValue: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textTertiary,
     marginTop: 4,
   },
   visitorDetailCard: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundSecondary,
     padding: 12,
     borderRadius: 8,
     marginTop: 8,
@@ -922,17 +925,17 @@ const styles = StyleSheet.create({
   visitorDetailName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: colors.textPrimary,
     marginBottom: 6,
   },
   visitorDetailInfo: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   visitorDetailNotes: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     fontStyle: 'italic',
     marginTop: 6,
   },
@@ -941,7 +944,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
     marginVertical: 8,
   },
@@ -956,11 +959,15 @@ const styles = StyleSheet.create({
   durationNumber: {
     fontSize: 48,
     fontWeight: 'bold',
-    color: '#2196F3',
+    color: colors.primary,
   },
   durationLabel: {
     fontSize: 16,
-    color: '#666',
+    color: colors.textSecondary,
     marginTop: 4,
   },
 });
+
+
+
+

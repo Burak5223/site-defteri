@@ -39,6 +39,7 @@ const VotingScreen = () => {
     const [newTitle, setNewTitle] = useState('');
     const [newDesc, setNewDesc] = useState('');
     const [newOptions, setNewOptions] = useState<string[]>(['', '']);
+    const [votingDuration, setVotingDuration] = useState('7'); // Default 7 days
 
     useEffect(() => {
         loadVotings();
@@ -107,9 +108,10 @@ const VotingScreen = () => {
 
             const siteId = user?.siteId || '1';
             
-            // Create voting with dates (30 days from now)
+            // Create voting with selected duration
             const startDate = new Date().toISOString();
-            const endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+            const durationDays = parseInt(votingDuration) || 7;
+            const endDate = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
 
             await votingService.createVoting({
                 title: newTitle.trim(),
@@ -123,6 +125,7 @@ const VotingScreen = () => {
             setNewTitle('');
             setNewDesc('');
             setNewOptions(['', '']);
+            setVotingDuration('7');
             Alert.alert(t('common.success'), t('votingScreen.createSuccess'));
             loadVotings();
         } catch (error) {
@@ -146,7 +149,27 @@ const VotingScreen = () => {
         setNewOptions(newOptions.filter((_, i) => i !== index));
     };
 
-    const activeCount = votings.filter(v => v.status === 'active').length;
+    const getRemainingTime = (endDate: string) => {
+        const now = new Date();
+        const end = new Date(endDate);
+        const diffMs = end.getTime() - now.getTime();
+        
+        if (diffMs <= 0) return 'Süre doldu';
+        
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        
+        if (diffDays > 0) {
+            return `${diffDays} gün kaldı`;
+        } else if (diffHours > 0) {
+            return `${diffHours} saat kaldı`;
+        } else {
+            const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            return `${diffMinutes} dakika kaldı`;
+        }
+    };
+
+    const activeCount = votings.filter(v => v.status?.toLowerCase() === 'active').length;
 
     return (
         <View style={styles.root}>
@@ -206,7 +229,12 @@ const VotingScreen = () => {
                                                 </View>
                                                 <View style={styles.statsRow}>
                                                     <Clock size={14} color="#64748b" style={{ marginRight: 4 }} />
-                                                    <Text style={styles.statsText}>{t('votingScreen.endDate')} {new Date(topic.endDate).toLocaleDateString('tr-TR')}</Text>
+                                                    <Text style={styles.statsText}>
+                                                        {topic.status === 'active' 
+                                                            ? getRemainingTime(topic.endDate)
+                                                            : `Bitiş: ${new Date(topic.endDate).toLocaleDateString('tr-TR')}`
+                                                        }
+                                                    </Text>
                                                 </View>
                                             </View>
                                         </View>
@@ -218,34 +246,58 @@ const VotingScreen = () => {
                                                 ? Math.round((option.voteCount / topic.totalVotes) * 100) 
                                                 : 0;
                                             const isSelected = selectedOption === option.id;
-                                            const disabled = topic.hasVoted || topic.status !== 'active';
+                                            const isCompleted = topic.status?.toLowerCase() !== 'active';
+                                            const disabled = topic.hasVoted || isCompleted;
 
                                             return (
                                                 <TouchableOpacity
                                                     key={option.id}
                                                     style={[
                                                         styles.optionButton,
-                                                        isSelected && styles.optionSelected,
-                                                        disabled && styles.optionDisabled
+                                                        isSelected && !isCompleted && styles.optionSelected,
+                                                        disabled && styles.optionDisabled,
+                                                        isCompleted && styles.optionResultsOnly
                                                     ]}
                                                     disabled={disabled}
                                                     onPress={() => !disabled && setSelectedOption(option.id)}
+                                                    activeOpacity={isCompleted ? 1 : 0.7}
                                                 >
                                                     <View style={styles.optionHeader}>
-                                                        <Text style={styles.optionLabel}>{option.optionText}</Text>
-                                                        <Text style={styles.optionPercent}>{percentage}%</Text>
+                                                        <Text style={[
+                                                            styles.optionLabel,
+                                                            isCompleted && styles.optionLabelResults
+                                                        ]}>{option.optionText}</Text>
+                                                        <Text style={[
+                                                            styles.optionPercent,
+                                                            isCompleted && styles.optionPercentResults
+                                                        ]}>{percentage}%</Text>
                                                     </View>
                                                     <View style={styles.progressBg}>
-                                                        <View style={[styles.progressFill, { width: `${percentage}%` }]} />
+                                                        <View style={[
+                                                            styles.progressFill, 
+                                                            { width: `${percentage}%` },
+                                                            isCompleted && styles.progressFillResults
+                                                        ]} />
                                                     </View>
-                                                    <Text style={styles.voteCount}>{option.voteCount} {t('votingScreen.votes')}</Text>
+                                                    <Text style={[
+                                                        styles.voteCount,
+                                                        isCompleted && styles.voteCountResults
+                                                    ]}>{option.voteCount} {t('votingScreen.votes')}</Text>
                                                 </TouchableOpacity>
                                             );
                                         })}
                                     </View>
 
+                                    {/* Show results info for completed votings */}
+                                    {topic.status?.toLowerCase() !== 'active' && (
+                                        <View style={styles.resultsInfo}>
+                                            <BarChart3 size={16} color="#0891b2" style={{ marginRight: 6 }} />
+                                            <Text style={styles.resultsText}>Oylama sonuçları</Text>
+                                        </View>
+                                    )}
+
                                     {/* Voting restrictions for tenants */}
-                                    {topic.status === 'active' && !topic.hasVoted && (
+                                    {topic.status?.toLowerCase() === 'active' && !topic.hasVoted && (
                                       <>
                                         {user?.residentType === 'tenant' ? (
                                           <View style={styles.restrictionInfo}>
@@ -272,7 +324,7 @@ const VotingScreen = () => {
                                       </>
                                     )}
 
-                                    {topic.hasVoted && (
+                                    {topic.status?.toLowerCase() === 'active' && topic.hasVoted && (
                                         <View style={styles.votedInfo}>
                                             <CheckCircle2 size={16} color="#16a34a" style={{ marginRight: 6 }} />
                                             <Text style={styles.votedText}>{t('votingScreen.voted')}</Text>
@@ -313,6 +365,35 @@ const VotingScreen = () => {
                                     onChangeText={setNewDesc}
                                     placeholder={t('votingScreen.descriptionPlaceholder')}
                                     multiline
+                                />
+                            </View>
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>Oylama Süresi (Gün)</Text>
+                                <View style={styles.durationButtons}>
+                                    {['3', '7', '14', '30'].map((days) => (
+                                        <TouchableOpacity
+                                            key={days}
+                                            style={[
+                                                styles.durationButton,
+                                                votingDuration === days && styles.durationButtonActive
+                                            ]}
+                                            onPress={() => setVotingDuration(days)}
+                                        >
+                                            <Text style={[
+                                                styles.durationButtonText,
+                                                votingDuration === days && styles.durationButtonTextActive
+                                            ]}>
+                                                {days} Gün
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                                <TextInput
+                                    style={[styles.input, { marginTop: 8 }]}
+                                    value={votingDuration}
+                                    onChangeText={setVotingDuration}
+                                    placeholder="Özel süre (gün)"
+                                    keyboardType="numeric"
                                 />
                             </View>
                             <View style={styles.formGroup}>
@@ -420,7 +501,7 @@ const styles = StyleSheet.create({
         color: '#94a3b8',
     },
     card: {
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.background,
         borderRadius: 16,
         padding: 16,
         borderWidth: 1,
@@ -484,7 +565,7 @@ const styles = StyleSheet.create({
         borderColor: '#e2e8f0',
         borderRadius: 12,
         padding: 12,
-        backgroundColor: '#f8fafc',
+        backgroundColor: colors.backgroundSecondary,
     },
     optionSelected: {
         borderColor: theme.colors.primary,
@@ -556,13 +637,48 @@ const styles = StyleSheet.create({
         color: '#16a34a',
         fontWeight: '500',
     },
+    resultsInfo: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 16,
+        padding: 10,
+        backgroundColor: '#ecfeff',
+        borderRadius: 12,
+    },
+    resultsText: {
+        color: '#0891b2',
+        fontWeight: '600',
+        fontSize: 14,
+    },
+    optionResultsOnly: {
+        backgroundColor: colors.background,
+        borderColor: '#cbd5e1',
+        opacity: 1,
+    },
+    optionLabelResults: {
+        color: '#0f172a',
+        fontWeight: '600',
+    },
+    optionPercentResults: {
+        color: '#0891b2',
+        fontWeight: '700',
+        fontSize: 14,
+    },
+    progressFillResults: {
+        backgroundColor: '#0891b2',
+    },
+    voteCountResults: {
+        color: '#64748b',
+        fontWeight: '500',
+    },
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'flex-end',
     },
     modalContent: {
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.background,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         padding: 24,
@@ -648,4 +764,34 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
     },
+    durationButtons: {
+        flexDirection: 'row',
+        gap: 8,
+        flexWrap: 'wrap',
+    },
+    durationButton: {
+        flex: 1,
+        minWidth: '22%',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#cbd5e1',
+        backgroundColor: colors.backgroundSecondary,
+        alignItems: 'center',
+    },
+    durationButtonActive: {
+        backgroundColor: theme.colors.primary,
+        borderColor: theme.colors.primary,
+    },
+    durationButtonText: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#64748b',
+    },
+    durationButtonTextActive: {
+        color: '#ffffff',
+        fontWeight: '600',
+    },
 });
+

@@ -1,33 +1,27 @@
+#!/usr/bin/env python3
 import mysql.connector
 
-def connect_db():
-    return mysql.connector.connect(
-        host='localhost',
-        user='root',
-        password='Hilton5252.',
-        database='smart_site_management'
-    )
+connection = mysql.connector.connect(
+    host='localhost',
+    database='smart_site_management',
+    user='root',
+    password='Hilton5252.'
+)
 
-conn = connect_db()
-cursor = conn.cursor(dictionary=True)
+cursor = connection.cursor()
 
-print("=== USER_ROLES TABLOSU ===\n")
-cursor.execute("DESCRIBE user_roles")
-columns = cursor.fetchall()
-for col in columns:
-    print(f"  {col['Field']}: {col['Type']}")
+print("=== user_roles table structure ===\n")
+cursor.execute("SHOW COLUMNS FROM user_roles")
+for col in cursor.fetchall():
+    print(f"{col[0]}: {col[1]}")
 
-print("\n=== ÖRNEK KAYITLAR ===\n")
-cursor.execute("SELECT * FROM user_roles LIMIT 5")
-rows = cursor.fetchall()
-for row in rows:
+print("\n=== Sample data ===\n")
+cursor.execute("SELECT * FROM user_roles LIMIT 3")
+columns = [desc[0] for desc in cursor.description]
+print("Columns:", columns)
+
+for row in cursor.fetchall():
     print(row)
 
-print("\n=== USERS TABLOSUNDA ROLE KOLONU ===\n")
-cursor.execute("SELECT DISTINCT role FROM users WHERE role IS NOT NULL LIMIT 10")
-roles = cursor.fetchall()
-for role in roles:
-    print(f"  - {role['role']}")
-
 cursor.close()
-conn.close()
+connection.close()

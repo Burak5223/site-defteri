@@ -12,7 +12,7 @@ import SuperAdminFinanceScreen from '../screens/superadmin/SuperAdminFinanceScre
 import SuperAdminPerformanceScreen from '../screens/superadmin/SuperAdminPerformanceScreen';
 import SuperAdminChatScreen from '../screens/superadmin/SuperAdminChatScreen';
 import SuperAdminSystemChatScreen from '../screens/superadmin/SuperAdminSystemChatScreen';
-import { colors } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -42,18 +42,20 @@ const SuperAdminMessagesStack = () => {
 };
 
 const SuperAdminNavigator = () => {
+  const { colors } = useTheme();
+
   return (
     <Tab.Navigator
       initialRouteName="SuperAdminHomeTab"
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.gray400,
+        tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
           height: 90,
           paddingBottom: 30,
           paddingTop: 10,
           borderTopColor: colors.border,
-          backgroundColor: colors.white,
+          backgroundColor: colors.background,
           elevation: 8,
         },
         tabBarLabelStyle: {

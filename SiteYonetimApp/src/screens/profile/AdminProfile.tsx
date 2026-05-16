@@ -29,6 +29,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useI18n, Language } from '../../context/I18nContext';
 import { colors, spacing, borderRadius, fontSize, fontWeight, iconSize } from '../../theme';
+import { useTheme } from '../../context/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { apiClient } from '../../api/apiClient';
 import EditProfileModal from '../../components/modals/EditProfileModal';
@@ -37,6 +38,8 @@ import ChangePasswordModal from '../../components/modals/ChangePasswordModal';
 const ProfileScreen = () => {
   const { user, signOut, hasRole } = useAuth();
   const { t, language, changeLanguage } = useI18n();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [showLanguageDialog, setShowLanguageDialog] = useState(false);
   const [editProfileModalVisible, setEditProfileModalVisible] = useState(false);
   const [changePasswordModalVisible, setChangePasswordModalVisible] = useState(false);
@@ -323,10 +326,10 @@ const ProfileScreen = () => {
 
 export default ProfileScreen;
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
@@ -403,7 +406,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     padding: 10,
   },
   infoIcon: {
@@ -425,7 +428,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     paddingHorizontal: 10,
     paddingVertical: 10,
     marginTop: 6,
@@ -473,7 +476,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.screenPaddingHorizontal,
   },
   modalContent: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: 18,
     maxHeight: '70%',
     paddingVertical: 12,
@@ -520,3 +523,6 @@ const styles = StyleSheet.create({
     color: colors.gray900,
   },
 });
+
+
+

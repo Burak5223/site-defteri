@@ -56,6 +56,17 @@ public class SuperAdminController {
     }
     
     /**
+     * Get apartments for a specific site
+     * GET /api/super-admin/sites/{siteId}/apartments
+     */
+    @GetMapping("/sites/{siteId}/apartments")
+    public ResponseEntity<List<Map<String, Object>>> getApartmentsBySite(@PathVariable String siteId) {
+        log.info("Getting apartments for site: {}", siteId);
+        List<Map<String, Object>> apartments = superAdminService.getApartmentsBySite(siteId);
+        return ResponseEntity.ok(apartments);
+    }
+    
+    /**
      * Get all managers
      * GET /api/super-admin/managers
      */

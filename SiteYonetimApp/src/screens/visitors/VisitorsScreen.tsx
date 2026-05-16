@@ -23,11 +23,12 @@ import {
   Car,
   UserCheck,
 } from 'lucide-react-native';
-import { lightTheme, spacing } from '../../theme';
+import { colors, lightTheme, spacing } from '../../theme';
 import { useAuth } from '../../context/AuthContext';
 import { useI18n } from '../../context/I18nContext';
 import { visitorService, VisitorResponse } from '../../services/visitor.service';
 import { EmptyState } from '../../components/EmptyState';
+import { useTheme } from '../../context/ThemeContext';
 
 interface Visitor {
   id: string;
@@ -42,6 +43,8 @@ interface Visitor {
 const VisitorsScreen = () => {
   const { user, hasRole } = useAuth();
   const { t } = useI18n();
+  const { colors: themeColors } = useTheme();
+  const styles = React.useMemo(() => createStyles(themeColors), [themeColors]);
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [visitors, setVisitors] = useState<Visitor[]>([]);
@@ -58,13 +61,13 @@ const VisitorsScreen = () => {
   // Temizlikçi rolü için erişim engelleme
   if (hasRole('CLEANING')) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: themeColors.backgroundSecondary }]}>
         <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
           <Users size={48} color="#9ca3af" />
-          <Text style={{ marginTop: 16, fontSize: 16, color: '#6b7280', textAlign: 'center' }}>
+          <Text style={{ marginTop: 16, fontSize: 16, color: colors.textSecondary, textAlign: 'center' }}>
             Bu ekrana erişim yetkiniz bulunmamaktadır.
           </Text>
-          <Text style={{ marginTop: 8, fontSize: 14, color: '#9ca3af', textAlign: 'center' }}>
+          <Text style={{ marginTop: 8, fontSize: 14, color: colors.textTertiary, textAlign: 'center' }}>
             Ziyaretçi yönetimi sadece yönetici ve güvenlik personeli tarafından kullanılabilir.
           </Text>
         </View>
@@ -161,7 +164,7 @@ const VisitorsScreen = () => {
       case 'active':
         return { bg: 'rgba(16,185,129,0.1)', color: '#059669', label: t('visitors.inside') };
       case 'completed':
-        return { bg: 'rgba(107,114,128,0.1)', color: '#4b5563', label: t('visitors.checkedOut') };
+        return { bg: 'rgba(107,114,128,0.1)', color: colors.textSecondary, label: t('visitors.checkedOut') };
       case 'pending':
         return { bg: 'rgba(245,158,11,0.1)', color: '#d97706', label: t('visitors.pending') };
       case 'cancelled':
@@ -175,19 +178,19 @@ const VisitorsScreen = () => {
   );
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: themeColors.backgroundSecondary }]}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
         refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[lightTheme.colors.primary]} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[themeColors.primary]} />
         }
       >
         {/* Header */}
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.headerTitle}>{t('visitors.title')}</Text>
-            <Text style={styles.headerSubtitle}>
+            <Text style={[styles.headerTitle, { color: themeColors.textPrimary }]}>{t('visitors.title')}</Text>
+            <Text style={[styles.headerSubtitle, { color: themeColors.textSecondary }]}>
               {visitors.filter(v => v.status === 'active').length} {t('visitors.activeVisitors')}
             </Text>
           </View>
@@ -201,9 +204,9 @@ const VisitorsScreen = () => {
         <View style={styles.searchWrapper}>
           <Search size={16} color="#9ca3af" style={styles.searchIcon} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { backgroundColor: themeColors.background, color: themeColors.textPrimary }]}
             placeholder={t('visitors.searchPlaceholder')}
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor={themeColors.textTertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -220,13 +223,13 @@ const VisitorsScreen = () => {
             {filteredVisitors.map((visitor) => {
               const status = getStatusColor(visitor.status);
               return (
-                <View key={visitor.id} style={styles.card}>
+                <View key={visitor.id} style={[styles.card, { backgroundColor: themeColors.background, borderColor: themeColors.border }]}>
                   <View style={styles.cardHeader}>
                     <View style={styles.visitorInfo}>
-                      <Text style={styles.visitorName}>{visitor.visitorName}</Text>
+                      <Text style={[styles.visitorName, { color: themeColors.textPrimary }]}>{visitor.visitorName}</Text>
                       <View style={styles.hostRow}>
                         <Users size={12} color="#6b7280" style={{ marginRight: 4 }} />
-                        <Text style={styles.hostName}>{visitor.hostName}</Text>
+                        <Text style={[styles.hostName, { color: themeColors.textSecondary }]}>{visitor.hostName}</Text>
                       </View>
                     </View>
                     <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
@@ -236,32 +239,32 @@ const VisitorsScreen = () => {
                     </View>
                   </View>
 
-                  <View style={styles.divider} />
+                  <View style={[styles.divider, { backgroundColor: themeColors.borderLight }]} />
 
                   <View style={styles.cardDetails}>
                     <View style={styles.detailItem}>
                       <Calendar size={14} color="#6b7280" style={{ marginRight: 6 }} />
-                      <Text style={styles.detailText}>
+                      <Text style={[styles.detailText, { color: themeColors.textSecondary }]}>
                         {new Date(visitor.visitDate).toLocaleDateString('tr-TR')}
                       </Text>
                     </View>
                     <View style={styles.detailItem}>
                       <Clock size={14} color="#6b7280" style={{ marginRight: 6 }} />
-                      <Text style={styles.detailText}>
+                      <Text style={[styles.detailText, { color: themeColors.textSecondary }]}>
                         {new Date(visitor.visitDate).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                       </Text>
                     </View>
                     {visitor.lpPlate && (
                       <View style={styles.detailItem}>
                         <Car size={14} color="#6b7280" style={{ marginRight: 6 }} />
-                        <Text style={styles.detailText}>{visitor.lpPlate}</Text>
+                        <Text style={[styles.detailText, { color: themeColors.textSecondary }]}>{visitor.lpPlate}</Text>
                       </View>
                     )}
                   </View>
                   
                   {visitor.notes && (
-                    <View style={styles.notesContainer}>
-                        <Text style={styles.notesText}>{visitor.notes}</Text>
+                    <View style={[styles.notesContainer, { backgroundColor: themeColors.backgroundSecondary }]}>
+                        <Text style={[styles.notesText, { color: themeColors.textSecondary }]}>{visitor.notes}</Text>
                     </View>
                   )}
 
@@ -291,7 +294,7 @@ const VisitorsScreen = () => {
         onRequestClose={() => setShowAddModal(false)}
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setShowAddModal(false)}>
-            <Pressable style={styles.modalContent} onPress={e => e.stopPropagation()}>
+            <Pressable style={[styles.modalContent, { backgroundColor: themeColors.background }]} onPress={e => e.stopPropagation()}>
                 <View style={styles.modalHeader}>
                     <View style={styles.dragHandle} />
                     <Text style={{ marginTop: 12, fontSize: 18, fontWeight: 'bold' }}>Ziyaretçi Ekle</Text>
@@ -300,9 +303,9 @@ const VisitorsScreen = () => {
                 <ScrollView contentContainerStyle={{ padding: 20 }}>
                     <View style={{ gap: 16 }}>
                       <View>
-                        <Text style={styles.inputLabel}>Ziyaretçi Adı Soyadı *</Text>
+                        <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>Ziyaretçi Adı Soyadı *</Text>
                         <TextInput 
-                          style={styles.input} 
+                          style={[styles.input, { backgroundColor: themeColors.background, borderColor: themeColors.border, color: themeColors.textPrimary }]} 
                           value={newVisitor.visitorName}
                           onChangeText={t => setNewVisitor({...newVisitor, visitorName: t})} 
                           placeholder="Ahmet Yılmaz"
@@ -310,9 +313,9 @@ const VisitorsScreen = () => {
                       </View>
                       
                       <View>
-                        <Text style={styles.inputLabel}>Ziyaret Edilen Kişi (Ad/Daire) *</Text>
+                        <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>Ziyaret Edilen Kişi (Ad/Daire) *</Text>
                         <TextInput 
-                          style={styles.input} 
+                          style={[styles.input, { backgroundColor: themeColors.background, borderColor: themeColors.border, color: themeColors.textPrimary }]} 
                           value={newVisitor.hostName}
                           onChangeText={t => setNewVisitor({...newVisitor, hostName: t})} 
                           placeholder="Daire 12 - Mehmet Bey"
@@ -320,9 +323,9 @@ const VisitorsScreen = () => {
                       </View>
 
                       <View>
-                        <Text style={styles.inputLabel}>Araç Plakası (Opsiyonel)</Text>
+                        <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>Araç Plakası (Opsiyonel)</Text>
                         <TextInput 
-                          style={styles.input} 
+                          style={[styles.input, { backgroundColor: themeColors.background, borderColor: themeColors.border, color: themeColors.textPrimary }]} 
                           value={newVisitor.vehiclePlate}
                           onChangeText={t => setNewVisitor({...newVisitor, vehiclePlate: t})} 
                           placeholder="34 ABC 123"
@@ -331,7 +334,7 @@ const VisitorsScreen = () => {
                       </View>
 
                       <View>
-                        <Text style={styles.inputLabel}>Notlar (Opsiyonel)</Text>
+                        <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>Notlar (Opsiyonel)</Text>
                         <TextInput 
                           style={[styles.input, { height: 80, textAlignVertical: 'top' }]} 
                           value={newVisitor.notes}
@@ -365,10 +368,10 @@ const VisitorsScreen = () => {
 
 export default VisitorsScreen;
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
@@ -386,17 +389,17 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#020617',
+    color: colors.textPrimary,
   },
   headerSubtitle: {
     fontSize: 12,
-    color: '#6b7280',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: lightTheme.colors.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
@@ -417,12 +420,12 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     height: 44,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.backgroundTertiary,
     borderRadius: 12,
     paddingLeft: 40,
     paddingRight: 16,
     fontSize: 14,
-    color: '#1f2937',
+    color: colors.textPrimary,
   },
   emptyState: {
     alignItems: 'center',
@@ -431,17 +434,17 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     marginTop: 12,
-    color: '#9ca3af',
+    color: colors.textTertiary,
     fontSize: 14,
   },
   list: {
     gap: 12,
   },
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     padding: 16,
   },
   cardHeader: {
@@ -456,7 +459,7 @@ const styles = StyleSheet.create({
   visitorName: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: colors.textPrimary,
   },
   hostRow: {
     flexDirection: 'row',
@@ -465,7 +468,7 @@ const styles = StyleSheet.create({
   },
   hostName: {
     fontSize: 12,
-    color: '#6b7280',
+    color: colors.textSecondary,
   },
   statusBadge: {
     paddingHorizontal: 8,
@@ -478,7 +481,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.backgroundTertiary,
     marginVertical: 12,
   },
   cardDetails: {
@@ -492,17 +495,17 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 12,
-    color: '#4b5563',
+    color: colors.textSecondary,
   },
   notesContainer: {
     marginTop: 12,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.backgroundSecondary,
     padding: 8,
     borderRadius: 8,
   },
   notesText: {
     fontSize: 12,
-    color: '#4b5563',
+    color: colors.textSecondary,
     fontStyle: 'italic',
   },
   actionRow: {
@@ -529,7 +532,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     minHeight: '65%',
@@ -539,7 +542,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: colors.borderLight,
   },
   dragHandle: {
     width: 40,
@@ -549,16 +552,19 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 12,
-    color: '#64748b',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   input: {
     height: 48,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.border,
     borderRadius: 8,
     paddingHorizontal: 12,
-    backgroundColor: '#fff',
-    color: '#0f172a',
+    backgroundColor: colors.background,
+    color: colors.textPrimary,
   },
 });
+
+
+

@@ -123,6 +123,30 @@ export function SecurityPackages() {
   };
 
   const handleDeliver = async (pkg: PackageType) => {
+    // Check if package has delivery code
+    if (pkg.deliveryCode) {
+      Alert.alert(
+        '🔐 Teslim Kodu',
+        `Bu paketin teslim kodu:\n\n${pkg.deliveryCode}\n\nLütfen bu kodu kuryeye söyleyin.`,
+        [
+          {
+            text: 'İptal',
+            style: 'cancel',
+          },
+          {
+            text: 'Kodu Söyledim, Teslim Et',
+            onPress: async () => {
+              await deliverPackage(pkg);
+            },
+          },
+        ]
+      );
+    } else {
+      await deliverPackage(pkg);
+    }
+  };
+
+  const deliverPackage = async (pkg: PackageType) => {
     try {
       // Güvenlik teslim ediyor (onay bekliyor)
       await packageService.initiateDelivery(pkg.id);

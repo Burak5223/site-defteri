@@ -13,11 +13,14 @@ import {
 } from 'react-native';
 import { Plus, X, Calendar, Users } from 'lucide-react-native';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
+import { useTheme } from '../../context/ThemeContext';
 import { votingService, Voting } from '../../services/voting.service';
 import { useAuth } from '../../context/AuthContext';
 
 const AdminVoting = ({ navigation }: any) => {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [votings, setVotings] = useState<Voting[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -257,7 +260,7 @@ const AdminVoting = ({ navigation }: any) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.backgroundSecondary },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { flex: 1 },
@@ -268,7 +271,7 @@ const styles = StyleSheet.create({
   createButton: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.primary, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: borderRadius.button },
   createButtonText: { fontSize: fontSize.buttonText, fontWeight: fontWeight.semibold, color: colors.white },
   votingsList: { gap: spacing.md },
-  votingCard: { backgroundColor: colors.white, borderRadius: borderRadius.card, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
+  votingCard: { backgroundColor: colors.background, borderRadius: borderRadius.card, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
   votingHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.sm },
   votingTitle: { fontSize: fontSize.cardTitle, fontWeight: fontWeight.semibold, color: colors.textPrimary, flex: 1, marginRight: spacing.sm },
   statusBadge: { paddingHorizontal: spacing.md, paddingVertical: 4, borderRadius: borderRadius.pill },
@@ -278,7 +281,7 @@ const styles = StyleSheet.create({
   votingMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   votingMetaText: { fontSize: fontSize.cardMeta, color: colors.textSecondary },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: colors.white, borderTopLeftRadius: borderRadius.cardLg, borderTopRightRadius: borderRadius.cardLg, maxHeight: '90%' },
+  modalContent: { backgroundColor: colors.background, borderTopLeftRadius: borderRadius.cardLg, borderTopRightRadius: borderRadius.cardLg, maxHeight: '90%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.xl, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalTitle: { fontSize: fontSize['2xl'], fontWeight: fontWeight.bold, color: colors.textPrimary },
   modalScroll: { padding: spacing.xl },
@@ -299,3 +302,6 @@ const styles = StyleSheet.create({
 });
 
 export default AdminVoting;
+
+
+

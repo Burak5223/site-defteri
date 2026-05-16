@@ -24,6 +24,7 @@ export interface Package {
   qrToken?: string;
   qrTokenExpiresAt?: string;
   qrTokenUsed?: boolean;
+  deliveryCode?: string;  // Optional code from courier company
   // AI Cargo fields
   aiExtracted?: boolean;
   aiExtractionLogId?: number;
@@ -82,6 +83,7 @@ export interface ResidentNotificationRequest {
   fullName: string;
   cargoCompany?: string;
   expectedDate?: string;
+  deliveryCode?: string;  // Optional delivery code from courier company
 }
 
 export interface ResidentNotificationResponse {

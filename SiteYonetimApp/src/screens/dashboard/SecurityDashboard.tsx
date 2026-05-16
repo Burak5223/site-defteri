@@ -16,14 +16,13 @@ export function SecurityDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({
-    todayTasks: 0,
-    weekTasks: 0,
-    completedToday: 0,
-    completedWeek: 0,
+    totalTasks: 0,
+    completedTasks: 0,
+    pendingTasks: 0,
     pendingPackages: 0,
   });
   const [recentAnnouncements, setRecentAnnouncements] = useState<Announcement[]>([]);
-  const [todayTasks, setTodayTasks] = useState<Task[]>([]);
+  const [recentTasks, setRecentTasks] = useState<Task[]>([]);
 
   useEffect(() => {
     loadDashboard();
@@ -53,54 +52,17 @@ export function SecurityDashboard() {
     }
 
     try {
-      // Görevleri çek
+      // Görevleri çek - görev sayfası ile aynı veri akışı
       const allTasks = await taskService.getTasks(user.siteId);
-      const securityTasks = allTasks
-        .filter(task => 
-          task.assignedTo?.includes('SECURITY') || 
-          task.assignedTo?.toLowerCase().includes('güvenlik')
-        )
-        .map(task => ({
-          ...task,
-          status: normalizeStatus(task.status as string)
-        }));
+      const securityTasks = allTasks.map(task => ({
+        ...task,
+        status: normalizeStatus(task.status as string)
+      }));
 
-      // Bugünün tarihi
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayEnd = new Date(today);
-      todayEnd.setHours(23, 59, 59, 999);
-
-      // Bu haftanın başlangıcı (Pazartesi)
-      const weekStart = new Date(today);
-      const day = weekStart.getDay();
-      const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1);
-      weekStart.setDate(diff);
-      weekStart.setHours(0, 0, 0, 0);
-
-      // Bugün oluşturulan görevler
-      const todayTasksList = securityTasks.filter(task => {
-        const taskDate = new Date(task.createdAt);
-        return taskDate >= today && taskDate <= todayEnd;
-      });
-
-      // Bu hafta oluşturulan görevler
-      const weekTasksList = securityTasks.filter(task => {
-        const taskDate = new Date(task.createdAt);
-        return taskDate >= weekStart;
-      });
-
-      // Bugün tamamlanan görevler
-      const completedToday = securityTasks.filter(task => {
-        const taskDate = new Date(task.createdAt);
-        return task.status === 'completed' && taskDate >= today && taskDate <= todayEnd;
-      }).length;
-
-      // Bu hafta tamamlanan görevler
-      const completedWeek = securityTasks.filter(task => {
-        const taskDate = new Date(task.createdAt);
-        return task.status === 'completed' && taskDate >= weekStart;
-      }).length;
+      // Görev istatistiklerini hesapla
+      const totalTasks = securityTasks.length;
+      const completedTasks = securityTasks.filter(t => t.status === 'completed').length;
+      const pendingTasks = totalTasks - completedTasks;
 
       // Paketleri çek
       const allPackages = await packageService.getPackages(user.siteId);
@@ -115,14 +77,13 @@ export function SecurityDashboard() {
         .slice(0, 3);
 
       setStats({
-        todayTasks: todayTasksList.length,
-        weekTasks: weekTasksList.length,
-        completedToday,
-        completedWeek,
+        totalTasks,
+        completedTasks,
+        pendingTasks,
         pendingPackages,
       });
       setRecentAnnouncements(sortedAnnouncements);
-      setTodayTasks(todayTasksList.slice(0, 3)); // Son 3 görev
+      setRecentTasks(securityTasks.slice(0, 3)); // Son 3 görev
     } catch (error) {
       console.error('Load dashboard error:', error);
     } finally {
@@ -165,7 +126,7 @@ export function SecurityDashboard() {
           <Shield size={32} color={colors.primary} />
           <View style={styles.siteText}>
             <Text style={styles.siteName}>{user?.siteName || t('dashboard.siteName')}</Text>
-            <Text style={styles.roleText}>{t('ui.security')}</Text>
+            <Text style={styles.roleText}>Güvenlik Personeli</Text>
           </View>
         </View>
         <View style={styles.headerActions}>
@@ -180,8 +141,8 @@ export function SecurityDashboard() {
 
       {/* Welcome Card */}
       <View style={styles.welcomeCard}>
-        <Text style={styles.welcomeTitle}>{t('securityDashboard.welcomeTitle')}</Text>
-        <Text style={styles.welcomeSubtitle}>{t('securityDashboard.welcomeSubtitle')}</Text>
+        <Text style={styles.welcomeTitle}>Hoş Geldiniz!</Text>
+        <Text style={styles.welcomeSubtitle}>Bugün güvenlik görevlerinizi buradan takip edebilirsiniz</Text>
       </View>
 
       {/* Stats Grid */}
@@ -193,8 +154,8 @@ export function SecurityDashboard() {
           <View style={[styles.statIcon, { backgroundColor: '#FFE4CC' }]}>
             <ClipboardList size={24} color="#FF9800" />
           </View>
-          <Text style={styles.statValue}>{stats.todayTasks}</Text>
-          <Text style={styles.statLabel}>{t('securityDashboard.todayTasks')}</Text>
+          <Text style={styles.statValue}>{stats.totalTasks}</Text>
+          <Text style={styles.statLabel}>Toplam Görev</Text>
         </Pressable>
 
         <Pressable 
@@ -204,8 +165,8 @@ export function SecurityDashboard() {
           <View style={[styles.statIcon, { backgroundColor: '#C8E6C9' }]}>
             <CheckCircle size={24} color={colors.success} />
           </View>
-          <Text style={styles.statValue}>{stats.completedToday}</Text>
-          <Text style={styles.statLabel}>{t('dashboard.completed')}</Text>
+          <Text style={styles.statValue}>{stats.completedTasks}</Text>
+          <Text style={styles.statLabel}>Tamamlanan</Text>
         </Pressable>
 
         <Pressable 
@@ -215,8 +176,8 @@ export function SecurityDashboard() {
           <View style={[styles.statIcon, { backgroundColor: '#BBDEFB' }]}>
             <ClipboardList size={24} color="#2196F3" />
           </View>
-          <Text style={styles.statValue}>{stats.weekTasks}</Text>
-          <Text style={styles.statLabel}>{t('securityDashboard.weekTasks')}</Text>
+          <Text style={styles.statValue}>{stats.pendingTasks}</Text>
+          <Text style={styles.statLabel}>Bekleyen Görev</Text>
         </Pressable>
 
         <Pressable 
@@ -227,23 +188,23 @@ export function SecurityDashboard() {
             <Package size={24} color="#9C27B0" />
           </View>
           <Text style={styles.statValue}>{stats.pendingPackages}</Text>
-          <Text style={styles.statLabel}>{t('securityDashboard.pendingPackages')}</Text>
+          <Text style={styles.statLabel}>Bekleyen Paket</Text>
         </Pressable>
       </View>
 
       {/* Son Duyurular */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{t('dashboard.recentAnnouncements')}</Text>
+          <Text style={styles.sectionTitle}>Son Duyurular</Text>
           <TouchableOpacity onPress={() => navigation.navigate('Announcements')}>
-            <Text style={styles.seeAll}>{t('dashboard.viewAll')}</Text>
+            <Text style={styles.seeAll}>Tümünü Gör</Text>
           </TouchableOpacity>
         </View>
 
         {recentAnnouncements.length === 0 ? (
           <View style={styles.emptyState}>
             <Bell size={32} color={colors.gray300} />
-            <Text style={styles.emptyText}>{t('dashboard.noAnnouncements')}</Text>
+            <Text style={styles.emptyText}>Henüz duyuru yok</Text>
           </View>
         ) : (
           recentAnnouncements.map((announcement) => (
@@ -263,7 +224,7 @@ export function SecurityDashboard() {
                   <Text style={styles.announcementTitle}>{announcement.title}</Text>
                   {announcement.priority === 'high' && (
                     <View style={styles.priorityBadge}>
-                      <Text style={styles.priorityText}>{t('dashboard.important')}</Text>
+                      <Text style={styles.priorityText}>Önemli</Text>
                     </View>
                   )}
                 </View>
@@ -282,19 +243,19 @@ export function SecurityDashboard() {
       {/* Bugünkü Görevler */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{t('dashboard.todayTasks')}</Text>
+          <Text style={styles.sectionTitle}>Son Görevler</Text>
           <TouchableOpacity onPress={() => navigation.navigate('Tasks')}>
-            <Text style={styles.seeAll}>{t('dashboard.viewAll')}</Text>
+            <Text style={styles.seeAll}>Tümünü Gör</Text>
           </TouchableOpacity>
         </View>
 
-        {todayTasks.length === 0 ? (
+        {recentTasks.length === 0 ? (
           <View style={styles.emptyState}>
             <ClipboardList size={32} color={colors.gray300} />
-            <Text style={styles.emptyText}>{t('dashboard.noTasks')}</Text>
+            <Text style={styles.emptyText}>Henüz görev yok</Text>
           </View>
         ) : (
-          todayTasks.map((task) => (
+          recentTasks.map((task) => (
             <Pressable 
               key={task.id} 
               style={styles.taskCard}
@@ -326,8 +287,8 @@ export function SecurityDashboard() {
                   color: task.status === 'completed' ? colors.success :
                         task.status === 'in_progress' ? '#2196F3' : '#FF9800'
                 }]}>
-                  {task.status === 'completed' ? t('dashboard.completed') :
-                   task.status === 'in_progress' ? t('dashboard.inProgress') : t('dashboard.waiting')}
+                  {task.status === 'completed' ? 'Tamamlandı' :
+                   task.status === 'in_progress' ? 'Devam Ediyor' : 'Bekliyor'}
                 </Text>
               </View>
             </Pressable>
@@ -347,16 +308,16 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.backgroundSecondary,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: colors.border,
   },
   siteInfo: {
     flexDirection: 'row',
@@ -372,7 +333,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.backgroundTertiary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -458,7 +419,7 @@ const styles = StyleSheet.create({
   },
   announcementCard: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
@@ -511,7 +472,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 32,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderRadius: 8,
   },
   emptyText: {
@@ -521,7 +482,7 @@ const styles = StyleSheet.create({
   },
   taskCard: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
@@ -565,3 +526,4 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
+

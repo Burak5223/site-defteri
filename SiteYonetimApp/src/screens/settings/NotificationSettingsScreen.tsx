@@ -19,7 +19,7 @@ import {
   Clock,
   Check,
 } from 'lucide-react-native';
-import { lightTheme, spacing } from '../../theme';
+import { colors, lightTheme, spacing } from '../../theme';
 import { useNavigation } from '@react-navigation/native';
 import { useI18n } from '../../context/I18nContext';
 
@@ -293,7 +293,7 @@ export default NotificationSettingsScreen;
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     padding: 12,
   },
   masterRow: {
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 999,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     alignSelf: 'flex-start',
   },
   switchInnerOn: {
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 999,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     alignSelf: 'flex-start',
   },
   switchInnerSmallOn: {
@@ -534,3 +534,4 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 });
+

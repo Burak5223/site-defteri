@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface BlockRepository extends JpaRepository<Block, String> {
     List<Block> findBySiteId(String siteId);
+    List<Block> findBySiteIdAndIsDeletedFalseOrderByNameAsc(String siteId);
 }

@@ -23,7 +23,7 @@ import {
   ShieldCheck
 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
-import { lightTheme } from '../theme';
+import { colors, lightTheme } from '../theme';
 
 interface DrawerMenuProps {
   visible: boolean;
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   },
   drawer: {
     width: 280,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     shadowColor: '#000',
     shadowOffset: { width: 2, height: 0 },
     shadowOpacity: 0.1,
@@ -161,8 +161,8 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingTop: 50,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-    backgroundColor: '#ffffff',
+    borderBottomColor: colors.borderLight,
+    backgroundColor: colors.background,
   },
   userInfo: {
     flexDirection: 'row',
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   footer: {
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
+    borderTopColor: colors.borderLight,
     marginBottom: 20,
   },
   logoutButton: {
@@ -239,3 +239,5 @@ const styles = StyleSheet.create({
     color: '#ef4444',
   },
 });
+
+

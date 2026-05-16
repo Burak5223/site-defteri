@@ -26,6 +26,7 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
+import { useTheme } from '../../context/ThemeContext';
 import { residentService, Resident, InviteResidentRequest } from '../../services/resident.service';
 import { siteService, Block, CreateBlockRequest, CreateApartmentRequest } from '../../services/site.service';
 import { useAuth } from '../../context/AuthContext';
@@ -34,6 +35,8 @@ type ViewMode = 'blocks' | 'apartments' | 'residents';
 
 const AdminResidents = () => {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [viewMode, setViewMode] = useState<ViewMode>('blocks');
   const [selectedBlock, setSelectedBlock] = useState<Block | null>(null);
   const [selectedApartment, setSelectedApartment] = useState<any | null>(null);
@@ -1223,7 +1226,7 @@ const AdminResidents = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.backgroundSecondary },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { flex: 1 },
@@ -1240,7 +1243,7 @@ const styles = StyleSheet.create({
   blockCard: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    backgroundColor: colors.white, 
+    backgroundColor: colors.background, 
     borderRadius: borderRadius.card, 
     padding: spacing.lg, 
     borderWidth: 1, 
@@ -1262,7 +1265,7 @@ const styles = StyleSheet.create({
   statsContainer: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
   statCard: { 
     flex: 1, 
-    backgroundColor: colors.white, 
+    backgroundColor: colors.background, 
     borderRadius: borderRadius.card, 
     padding: spacing.md, 
     alignItems: 'center', 
@@ -1277,7 +1280,7 @@ const styles = StyleSheet.create({
     flex: 1, 
     flexDirection: 'row', 
     alignItems: 'center', 
-    backgroundColor: colors.white, 
+    backgroundColor: colors.background, 
     borderRadius: borderRadius.input, 
     borderWidth: 1, 
     borderColor: colors.border, 
@@ -1296,7 +1299,7 @@ const styles = StyleSheet.create({
   
   residentsList: { gap: spacing.md },
   residentCard: { 
-    backgroundColor: colors.white, 
+    backgroundColor: colors.background, 
     borderRadius: borderRadius.card, 
     padding: spacing.lg, 
     borderWidth: 1, 
@@ -1417,7 +1420,7 @@ const styles = StyleSheet.create({
   
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: { 
-    backgroundColor: colors.white, 
+    backgroundColor: colors.background, 
     borderTopLeftRadius: borderRadius.cardLg, 
     borderTopRightRadius: borderRadius.cardLg, 
     maxHeight: '90%' 
@@ -1452,7 +1455,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, 
     borderColor: colors.border, 
     alignItems: 'center', 
-    backgroundColor: colors.white 
+    backgroundColor: colors.background 
   },
   radioButtonActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   radioText: { fontSize: fontSize.cardTitle, fontWeight: fontWeight.medium, color: colors.textPrimary },
@@ -1494,7 +1497,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: borderRadius.sm,
     marginBottom: spacing.xs,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -1536,7 +1539,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: borderRadius.sm,
     marginBottom: spacing.xs,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -1562,7 +1565,7 @@ const styles = StyleSheet.create({
   },
   apartmentGridCard: {
     width: '48%',
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.card,
     padding: spacing.lg,
     alignItems: 'center',
@@ -1586,3 +1589,4 @@ const styles = StyleSheet.create({
 });
 
 export default AdminResidents;
+

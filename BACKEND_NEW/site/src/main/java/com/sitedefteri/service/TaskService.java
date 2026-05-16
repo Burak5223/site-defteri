@@ -5,12 +5,14 @@ import com.sitedefteri.dto.response.TaskResponse;
 import com.sitedefteri.entity.Task;
 import com.sitedefteri.exception.ResourceNotFoundException;
 import com.sitedefteri.repository.TaskRepository;
+import com.sitedefteri.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 @Service
@@ -19,6 +21,7 @@ import java.util.stream.Collectors;
 public class TaskService {
     
     private final TaskRepository taskRepository;
+    private final UserRepository userRepository;
     
     @Transactional(readOnly = true)
     public List<TaskResponse> getTasksBySite(String siteId) {
@@ -42,11 +45,36 @@ public class TaskService {
         return taskRepository.findBySiteIdOrderByCreatedAtDesc(siteId)
                 .stream()
                 .filter(task -> {
-                    String assignedRole = task.getAssignedTo();
+                    String assignedRole = resolveAssignedRole(task);
                     // Hem "ROLE_SECURITY" hem "SECURITY" formatını destekle
-                    return assignedRole.equals(userRole) || 
+                    return assignedRole != null && (
+                           assignedRole.equals(userRole) || 
                            assignedRole.equals("ROLE_" + userRole) ||
-                           ("ROLE_" + assignedRole).equals(userRole);
+                           ("ROLE_" + assignedRole).equals(userRole));
+                })
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+    
+    @Transactional(readOnly = true)
+    public List<TaskResponse> getTasksByUser(String siteId, String userId, String userRole) {
+        log.info("Fetching tasks for site: {}, user: {} and role: {}", siteId, userId, userRole);
+        
+        // Admin tüm görevleri görebilir
+        if ("ROLE_ADMIN".equals(userRole) || "ADMIN".equals(userRole) || 
+            "ROLE_SUPER_ADMIN".equals(userRole) || "SUPER_ADMIN".equals(userRole)) {
+            return getTasksBySite(siteId);
+        }
+        
+        // Diğer roller sadece kendilerine atanan görevleri görebilir (assigned_to = user_id)
+        return taskRepository.findBySiteIdOrderByCreatedAtDesc(siteId)
+                .stream()
+                .filter(task -> {
+                    String assignedTo = task.getAssignedTo();
+                    String assignedRole = resolveAssignedRole(task);
+                    // Eski kayitlarda user ID, yeni kayitlarda rol tutulabiliyor.
+                    return (assignedTo != null && assignedTo.equals(userId)) ||
+                           (assignedRole != null && assignedRole.equals(userRole));
                 })
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -173,10 +201,77 @@ public class TaskService {
         response.setId(task.getId());
         response.setTitle(task.getTitle());
         response.setDescription(task.getDescription());
-        response.setAssignedTo(task.getAssignedTo());
+        response.setAssignedTo(resolveAssignedRole(task));
+        response.setTaskType(task.getTaskType());
         response.setDueDate(task.getDueDate());
         response.setStatus(task.getStatus().name());
         response.setCreatedAt(task.getCreatedAt());
         return response;
+    }
+
+    private String resolveAssignedRole(Task task) {
+        String assignedTo = task.getAssignedTo();
+        String assignedRole = normalizeRole(assignedTo);
+        if (assignedRole != null) {
+            return assignedRole;
+        }
+
+        if (assignedTo != null && !assignedTo.isBlank()) {
+            String userRole = userRepository.findRolesByUserId(assignedTo).stream()
+                    .map(this::normalizeRole)
+                    .filter(role -> role != null)
+                    .filter(role -> role.equals("ROLE_SECURITY") ||
+                                    role.equals("ROLE_CLEANING") ||
+                                    role.equals("ROLE_MAINTENANCE"))
+                    .findFirst()
+                    .orElse(null);
+            if (userRole != null) {
+                return userRole;
+            }
+        }
+
+        String inferredRole = normalizeRole(task.getTaskType());
+        if (inferredRole != null) {
+            return inferredRole;
+        }
+
+        inferredRole = normalizeRole(task.getTitle());
+        if (inferredRole != null) {
+            return inferredRole;
+        }
+
+        String descriptionRole = normalizeRole(task.getDescription());
+        if (descriptionRole != null) {
+            return descriptionRole;
+        }
+
+        return "ROLE_SECURITY";
+    }
+
+    private String normalizeRole(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        String normalized = value.trim()
+                .toUpperCase(Locale.forLanguageTag("tr-TR"))
+                .replaceAll("\\s+", "_");
+
+        if (normalized.contains("ROLE_SECURITY") || normalized.equals("SECURITY") ||
+            normalized.contains("GUVEN") || normalized.contains("GÜVEN") ||
+            normalized.contains("GÃ") || normalized.contains("GUVENLIK")) {
+            return "ROLE_SECURITY";
+        }
+        if (normalized.contains("ROLE_CLEANING") || normalized.equals("CLEANING") ||
+            normalized.contains("TEMIZ") || normalized.contains("TEMİZ") ||
+            normalized.contains("TEMIZLIK")) {
+            return "ROLE_CLEANING";
+        }
+        if (normalized.contains("ROLE_MAINTENANCE") || normalized.equals("MAINTENANCE") ||
+            normalized.contains("BAKIM") || normalized.contains("BAKÄ")) {
+            return "ROLE_MAINTENANCE";
+        }
+
+        return null;
     }
 }

@@ -23,8 +23,6 @@ import {
   UserCircle,
   LogOut,
   Megaphone,
-  AlertTriangle,
-  Package,
 } from 'lucide-react-native';
 import { useI18n } from '../../context/I18nContext';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
@@ -325,13 +323,13 @@ const SuperAdminScreen = ({ navigation }: any) => {
             onPress={() => handleStatsPress('residents')}
           >
             <View style={styles.topCardHeader}>
-              <Text style={styles.topCardLabel}>{t('superAdminScreen.totalResidents').toUpperCase()}</Text>
+              <Text style={styles.topCardLabel}>TOPLAM DAİRE</Text>
               <View style={[styles.topCardIcon, { backgroundColor: colors.white }]}>
-                <Users size={20} color={colors.success} />
+                <Building2 size={20} color={colors.success} />
               </View>
             </View>
-            <Text style={styles.topCardValue}>{dashboardStats?.totalResidents || 0}</Text>
-            <Text style={styles.topCardSubtitle}>{dashboardStats?.totalApartments || 0} {t('superAdminScreen.apartments')}</Text>
+            <Text style={styles.topCardValue}>{dashboardStats?.totalApartments || 0}</Text>
+            <Text style={styles.topCardSubtitle}>{dashboardStats?.totalResidents || 0} dolu/sakin kaydı</Text>
           </Pressable>
 
           <Pressable 
@@ -366,33 +364,6 @@ const SuperAdminScreen = ({ navigation }: any) => {
             </Text>
           </Pressable>
         </View>
-        {/* Secondary Stats - 3 Cards */}
-        <View style={styles.secondaryGrid}>
-          <View style={styles.secondaryCard}>
-            <View style={styles.secondaryRow}>
-              <AlertTriangle size={16} color="#ef4444" />
-              <Text style={styles.secondaryLabel}>Açık Arızalar</Text>
-            </View>
-            <Text style={styles.secondaryValue}>{dashboardStats?.openTickets || 0}</Text>
-          </View>
-
-          <View style={styles.secondaryCard}>
-            <View style={styles.secondaryRow}>
-              <DollarSign size={16} color="#f59e0b" />
-              <Text style={styles.secondaryLabel}>Bekleyen Aidatlar</Text>
-            </View>
-            <Text style={styles.secondaryValue}>{dashboardStats?.unpaidDues || 0}</Text>
-          </View>
-
-          <View style={styles.secondaryCard}>
-            <View style={styles.secondaryRow}>
-              <Package size={16} color="#3b82f6" />
-              <Text style={styles.secondaryLabel}>Bekleyen Paketler</Text>
-            </View>
-            <Text style={styles.secondaryValue}>{dashboardStats?.waitingPackages || 0}</Text>
-          </View>
-        </View>
-
         {/* Performance Metrics */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Performans Metrikleri</Text>
@@ -619,7 +590,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     padding: spacing.lg,
     borderRadius: borderRadius.card,
     marginBottom: spacing.lg,
@@ -723,7 +694,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fef3c7',
   },
   topCardWhite: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -766,7 +737,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     padding: spacing.md,
     alignItems: 'center',
   },
@@ -827,7 +798,7 @@ const styles = StyleSheet.create({
   quickActionCard: {
     flex: 1,
     minWidth: 150,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.card,
     padding: spacing.lg,
     borderWidth: 1,
@@ -881,7 +852,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     padding: spacing.lg,
   },
   siteRow: {
@@ -963,7 +934,7 @@ const styles = StyleSheet.create({
   },
   secondaryCard: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.card,
     padding: spacing.md,
     borderWidth: 1,

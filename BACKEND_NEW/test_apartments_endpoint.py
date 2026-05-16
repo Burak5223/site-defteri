@@ -1,47 +1,72 @@
-#!/usr/bin/env python3
-"""
-Test /api/users/me/apartments endpoint
-"""
 import requests
-import json
 
-# Login first
-login_url = "http://localhost:8080/api/auth/login"
+BASE_URL = "http://localhost:8080/api"
+
+# Login
 login_data = {
-    "email": "sakin@site.com",
-    "password": "sakin123"
+    "email": "superadmin@site.com",
+    "password": "super123"
 }
-
-print("🔐 Logging in as sakin@site.com...")
-login_response = requests.post(login_url, json=login_data)
-
-if login_response.status_code != 200:
-    print(f"❌ Login failed: {login_response.status_code}")
-    print(login_response.text)
+response = requests.post(f"{BASE_URL}/auth/login", json=login_data)
+if response.status_code == 200:
+    token = response.json()['accessToken']
+    print("✓ Logged in successfully\n")
+else:
+    print(f"✗ Login failed: {response.status_code}")
     exit(1)
 
-login_result = login_response.json()
-token = login_result.get('accessToken')
-print(f"✅ Login successful! Token: {token[:20]}...")
+headers = {"Authorization": f"Bearer {token}"}
 
-# Test apartments endpoint
-apartments_url = "http://localhost:8080/api/users/me/apartments"
-headers = {
-    "Authorization": f"Bearer {token}",
-    "Content-Type": "application/json"
-}
-
-print(f"\n📡 Testing {apartments_url}...")
-apartments_response = requests.get(apartments_url, headers=headers)
-
-print(f"Status Code: {apartments_response.status_code}")
-print(f"\nResponse:")
-print(json.dumps(apartments_response.json(), indent=2, ensure_ascii=False))
-
-if apartments_response.status_code == 200:
-    apartments = apartments_response.json()
-    print(f"\n✅ Found {len(apartments)} apartment(s):")
-    for apt in apartments:
-        print(f"   - {apt.get('blockName')} - {apt.get('unitNumber')} ({apt.get('assignmentType')})")
+# Get all sites
+print("1. Getting all sites...")
+response = requests.get(f"{BASE_URL}/super-admin/sites", headers=headers)
+if response.status_code == 200:
+    sites = response.json()
+    print(f"✓ Found {len(sites)} sites\n")
+    
+    print("Sites with apartment counts:")
+    print("=" * 70)
+    for site in sites:
+        print(f"{site['name']}: {site['totalApartments']} daire, {site['totalResidents']} sakin")
+    print("=" * 70)
+    
+    # Test apartments endpoint for first site
+    if sites:
+        test_site = sites[0]
+        print(f"\n2. Getting apartments for {test_site['name']}...")
+        response = requests.get(
+            f"{BASE_URL}/super-admin/sites/{test_site['id']}/apartments",
+            headers=headers
+        )
+        if response.status_code == 200:
+            apartments = response.json()
+            print(f"✓ Found {len(apartments)} apartments\n")
+            
+            # Show first 10 apartments
+            print("First 10 apartments:")
+            print("-" * 70)
+            for apt in apartments[:10]:
+                occupied = "✓ Dolu" if apt['isOccupied'] else "○ Boş"
+                print(f"{apt['blockName']}-{apt['unitNumber']}: {occupied} ({apt['residentCount']} sakin)")
+            print("-" * 70)
+            
+            # Statistics
+            occupied_count = sum(1 for apt in apartments if apt['isOccupied'])
+            empty_count = len(apartments) - occupied_count
+            occupancy_rate = (occupied_count / len(apartments) * 100) if apartments else 0
+            
+            print(f"\nStatistics:")
+            print(f"  Total: {len(apartments)} daire")
+            print(f"  Dolu: {occupied_count} daire")
+            print(f"  Boş: {empty_count} daire")
+            print(f"  Doluluk Oranı: %{occupancy_rate:.1f}")
+            
+            print("\n✓ ALL TESTS PASSED!")
+        else:
+            print(f"✗ Failed to get apartments: {response.status_code}")
+            print(response.text)
+    else:
+        print("No sites found")
 else:
-    print(f"\n❌ Request failed!")
+    print(f"✗ Failed to get sites: {response.status_code}")
+    print(response.text)

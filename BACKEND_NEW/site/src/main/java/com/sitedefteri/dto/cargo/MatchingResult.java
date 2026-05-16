@@ -17,6 +17,7 @@ public class MatchingResult {
     private String apartmentId;
     private String residentQrId;
     private String message;
+    private String deliveryCode;  // Added delivery code field
 
     public static MatchingResult noMatch(String message) {
         MatchingResult result = new MatchingResult();
@@ -26,7 +27,7 @@ public class MatchingResult {
     }
 
     public static MatchingResult success(Long notificationId, String residentId, 
-                                        String apartmentId, String residentQrId, String message) {
+                                        String apartmentId, String residentQrId, String message, String deliveryCode) {
         MatchingResult result = new MatchingResult();
         result.setMatched(true);
         result.setNotificationId(notificationId);
@@ -34,6 +35,7 @@ public class MatchingResult {
         result.setApartmentId(apartmentId);
         result.setResidentQrId(residentQrId);
         result.setMessage(message);
+        result.setDeliveryCode(deliveryCode);  // Set delivery code
         return result;
     }
 }

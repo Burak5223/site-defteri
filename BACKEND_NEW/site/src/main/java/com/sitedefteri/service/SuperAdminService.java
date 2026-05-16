@@ -48,18 +48,21 @@ public class SuperAdminService {
             // Count managers (users with ADMIN role) - use findAll and filter
             List<UserSiteMembership> allMemberships = membershipRepository.findAll();
             long totalManagers = allMemberships.stream()
-                .filter(m -> "yonetici".equals(m.getRoleType()))
+                .filter(this::isActiveMembership)
+                .filter(m -> isManagerRole(m.getRoleType()))
+                .map(m -> m.getUser() != null ? m.getUser().getId() : null)
+                .filter(Objects::nonNull)
+                .distinct()
                 .count();
             log.info("Total managers: {}", totalManagers);
             
-            // Count residents (users with RESIDENT role)
-            long totalResidents = allMemberships.stream()
-                .filter(m -> "sakin".equals(m.getRoleType()))
-                .count();
+            long totalResidents = countAllResidentsFromApartments();
             log.info("Total residents: {}", totalResidents);
             
-            // Count apartments
-            long totalApartments = apartmentRepository.count();
+            // Count only non-deleted apartments that belong to active sites.
+            long totalApartments = siteRepository.findAll().stream()
+                .mapToLong(site -> apartmentRepository.countBySiteId(site.getId()))
+                .sum();
             log.info("Total apartments: {}", totalApartments);
             
             // Calculate real performance score
@@ -177,8 +180,7 @@ public class SuperAdminService {
                     
                     // Calculate real statistics from user_site_memberships
                     long totalApartments = apartmentRepository.countBySiteId(site.getId());
-                    long totalResidents = membershipRepository.countBySiteIdAndRoleTypeAndIsDeletedAndStatus(
-                        site.getId(), "sakin", false, "aktif");
+                    long totalResidents = countResidentsBySiteFromApartments(site.getId());
                     
                     siteInfo.put("totalApartments", totalApartments);
                     siteInfo.put("totalResidents", totalResidents);
@@ -196,6 +198,40 @@ public class SuperAdminService {
     }
     
     /**
+     * Get apartments for a specific site
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getApartmentsBySite(String siteId) {
+        log.info("Getting apartments for site: {}", siteId);
+        
+        try {
+            List<Apartment> apartments = apartmentRepository.findBySiteIdOrderByBlockNameAscUnitNumberAsc(siteId);
+            
+            return apartments.stream()
+                .map(apartment -> {
+                    Map<String, Object> aptInfo = new HashMap<>();
+                    aptInfo.put("id", apartment.getId());
+                    aptInfo.put("blockName", apartment.getBlockName());
+                    aptInfo.put("unitNumber", apartment.getUnitNumber());
+                    aptInfo.put("floor", apartment.getFloor());
+                    aptInfo.put("status", apartment.getStatus());
+                    
+                    // Basit doluluk kontrolü - owner veya current resident varsa dolu
+                    boolean isOccupied = (apartment.getOwnerUserId() != null && !apartment.getOwnerUserId().isEmpty()) ||
+                                       (apartment.getCurrentResidentId() != null && !apartment.getCurrentResidentId().isEmpty());
+                    aptInfo.put("isOccupied", isOccupied);
+                    
+                    return aptInfo;
+                })
+                .collect(Collectors.toList());
+                
+        } catch (Exception e) {
+            log.error("Error getting apartments for site: {}", siteId, e);
+            return new ArrayList<>();
+        }
+    }
+    
+    /**
      * Get all residents across all sites
      */
     @Transactional(readOnly = true)
@@ -203,29 +239,32 @@ public class SuperAdminService {
         log.info("Getting all residents across all sites");
         
         try {
-            // Get all users with RESIDENT role
-            List<UserSiteMembership> residentMemberships = membershipRepository.findByRoleType("sakin");
-            
-            return residentMemberships.stream()
-                .filter(membership -> membership.getUser() != null && membership.getSite() != null)
-                .map(membership -> {
-                    Map<String, Object> residentInfo = new HashMap<>();
-                    User user = membership.getUser();
-                    Site site = membership.getSite();
-                    
-                    residentInfo.put("id", user.getId());
-                    residentInfo.put("fullName", user.getFullName());
-                    residentInfo.put("email", user.getEmail());
-                    residentInfo.put("phone", user.getPhone() != null ? user.getPhone() : "");
-                    residentInfo.put("apartmentNumber", "A-" + (Math.random() * 500 + 1)); // Mock apartment number
-                    residentInfo.put("siteName", site.getName());
-                    residentInfo.put("siteId", site.getId());
-                    residentInfo.put("status", "aktif");
-                    residentInfo.put("registrationDate", LocalDate.now().minusDays((long)(Math.random() * 365)));
-                    
-                    return residentInfo;
-                })
-                .collect(Collectors.toList());
+            List<Map<String, Object>> apartmentRows = new ArrayList<>();
+            List<Site> sites = siteRepository.findAll();
+
+            for (Site site : sites) {
+                List<Apartment> apartments = apartmentRepository.findBySiteIdOrderByBlockNameAscUnitNumberAsc(site.getId());
+
+                for (Apartment apartment : apartments) {
+                    List<User> residents = userRepository.findByApartmentId(apartment.getId());
+
+                    if (!residents.isEmpty()) {
+                        for (User resident : residents) {
+                            apartmentRows.add(toApartmentResidentRow(site, apartment, resident, residents.size()));
+                        }
+                    } else {
+                        User fallbackResident = findApartmentFallbackResident(apartment);
+                        apartmentRows.add(toApartmentResidentRow(
+                            site,
+                            apartment,
+                            fallbackResident,
+                            fallbackResident != null ? 1 : 0
+                        ));
+                    }
+                }
+            }
+
+            return apartmentRows;
                 
         } catch (Exception e) {
             log.error("Error getting residents", e);
@@ -982,5 +1021,108 @@ public class SuperAdminService {
         messageMap.put("isRead", message.getIsRead());
         messageMap.put("createdAt", message.getCreatedAt());
         return messageMap;
+    }
+
+    private boolean isActiveMembership(UserSiteMembership membership) {
+        return membership != null
+            && !Boolean.TRUE.equals(membership.getIsDeleted())
+            && "aktif".equalsIgnoreCase(nullToEmpty(membership.getStatus()));
+    }
+
+    private boolean isResidentRole(String roleType) {
+        String normalized = normalizeRole(roleType);
+        return "SAKIN".equals(normalized) || "RESIDENT".equals(normalized);
+    }
+
+    private boolean isManagerRole(String roleType) {
+        String normalized = normalizeRole(roleType);
+        return "YONETICI".equals(normalized) || "ADMIN".equals(normalized) || "MANAGER".equals(normalized);
+    }
+
+    private String normalizeRole(String roleType) {
+        return nullToEmpty(roleType)
+            .trim()
+            .replace("ROLE_", "")
+            .replace(" ", "_")
+            .toUpperCase(Locale.ROOT);
+    }
+
+    private String nullToEmpty(String value) {
+        return value != null ? value : "";
+    }
+
+    private User findApartmentFallbackResident(Apartment apartment) {
+        String userId = apartment.getCurrentResidentId();
+        if (userId == null || userId.isBlank()) {
+            userId = apartment.getOwnerUserId();
+        }
+
+        if (userId == null || userId.isBlank()) {
+            return null;
+        }
+
+        try {
+            return userRepository.findById(userId).orElse(null);
+        } catch (Exception e) {
+            log.warn("Could not resolve resident {} for apartment {}", userId, apartment.getId());
+            return null;
+        }
+    }
+
+    private Map<String, Object> toApartmentResidentRow(Site site, Apartment apartment, User resident, int residentCount) {
+        Map<String, Object> row = new HashMap<>();
+        String blockName = apartment.getBlockName() != null ? apartment.getBlockName() : "";
+        String unitNumber = apartment.getUnitNumber() != null ? apartment.getUnitNumber() : "";
+        String apartmentNumber = blockName.isBlank() ? unitNumber : blockName + "-" + unitNumber;
+        boolean occupied = resident != null;
+
+        row.put("id", occupied ? resident.getId() + "-" + apartment.getId() : "empty-" + apartment.getId());
+        row.put("userId", occupied ? resident.getId() : null);
+        row.put("apartmentId", apartment.getId());
+        row.put("fullName", occupied ? resident.getFullName() : "Bos Daire");
+        row.put("email", occupied ? resident.getEmail() : "");
+        row.put("phone", occupied && resident.getPhone() != null ? resident.getPhone() : "");
+        row.put("apartmentNumber", apartmentNumber);
+        row.put("blockName", blockName);
+        row.put("unitNumber", unitNumber);
+        row.put("siteName", site.getName());
+        row.put("siteId", site.getId());
+        row.put("status", occupied ? "aktif" : "bos");
+        row.put("isOccupied", occupied);
+        row.put("residentCount", residentCount);
+        row.put("registrationDate", occupied && resident.getCreatedAt() != null ? resident.getCreatedAt().toLocalDate() : null);
+
+        return row;
+    }
+
+    private long countAllResidentsFromApartments() {
+        Set<String> userIds = new HashSet<>();
+        for (Site site : siteRepository.findAll()) {
+            addSiteResidentIds(site.getId(), userIds);
+        }
+        return userIds.size();
+    }
+
+    private long countResidentsBySiteFromApartments(String siteId) {
+        Set<String> userIds = new HashSet<>();
+        addSiteResidentIds(siteId, userIds);
+        return userIds.size();
+    }
+
+    private void addSiteResidentIds(String siteId, Set<String> userIds) {
+        List<Apartment> apartments = apartmentRepository.findBySiteIdOrderByBlockNameAscUnitNumberAsc(siteId);
+        for (Apartment apartment : apartments) {
+            userRepository.findByApartmentId(apartment.getId()).stream()
+                .map(User::getId)
+                .filter(Objects::nonNull)
+                .forEach(userIds::add);
+
+            if (apartment.getOwnerUserId() != null && !apartment.getOwnerUserId().isBlank()) {
+                userIds.add(apartment.getOwnerUserId());
+            }
+            if (apartment.getCurrentResidentId() != null && !apartment.getCurrentResidentId().isBlank()) {
+                userIds.add(apartment.getCurrentResidentId());
+            }
+        }
     }
 }

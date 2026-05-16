@@ -721,13 +721,13 @@ export const translations = {
     // Voting Screen
     votingScreen: {
       title: 'E-Oylama',
-      activeVotings: 'aktif oylama',
+      activeVotings: 'devam eden oylama',
       createVoting: 'Oylama Oluştur',
       loading: 'Yükleniyor...',
       loadError: 'Oylamalar yüklenirken hata oluştu.',
       noVotings: 'Henüz oylama yok',
       active: 'Devam Ediyor',
-      closed: 'Sona Erdi',
+      closed: 'Tamamlandı',
       votes: 'oy',
       endDate: 'Bitiş:',
       vote: 'Oy Ver',

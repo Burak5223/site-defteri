@@ -20,7 +20,9 @@ import {
   ArrowRight,
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
-import { colors, spacing, borderRadius, fontSize, fontWeight, iconSize, lightTheme } from '../../theme';
+import { lightColors, spacing, borderRadius, fontSize, fontWeight, iconSize, lightTheme } from '../../theme';
+
+const authColors = lightColors;
 
 const LoginScreen = ({ navigation }: any) => {
   const { login } = useAuth();
@@ -71,7 +73,7 @@ const LoginScreen = ({ navigation }: any) => {
         <ScrollView contentContainerStyle={styles.content}>
             <View style={styles.header}>
             <View style={styles.logoWrapper}>
-                <Building2 size={40} color={lightTheme.colors.primary} />
+                <Building2 size={40} color={authColors.primary} />
             </View>
             <Text style={styles.title}>Site Yönetimi</Text>
             <Text style={styles.subtitle}>Hesabınıza giriş yapın</Text>
@@ -195,7 +197,7 @@ export default LoginScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: authColors.white,
     paddingHorizontal: spacing.screenPaddingHorizontal,
     paddingVertical: spacing.xl,
     alignSelf: 'center',
@@ -217,7 +219,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: borderRadius.xl,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: authColors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.rowGap,
@@ -225,12 +227,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: fontSize['4xl'],
     fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
+    color: authColors.textPrimary,
   },
   subtitle: {
     marginTop: spacing.iconMargin,
     fontSize: fontSize.cardTitle,
-    color: colors.textSecondary,
+    color: authColors.textSecondary,
   },
   form: {
     marginTop: spacing.sm,
@@ -241,7 +243,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: fontSize.labelText,
-    color: colors.textPrimary,
+    color: authColors.textPrimary,
     marginBottom: 4,
   },
   inputWrapper: {
@@ -250,14 +252,14 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: authColors.border,
     borderRadius: borderRadius.cardSm,
     paddingVertical: spacing.inputPaddingVertical,
     paddingHorizontal: spacing.inputPaddingHorizontal,
     paddingLeft: 40,
     fontSize: fontSize.inputText,
-    color: colors.textPrimary,
-    backgroundColor: colors.white,
+    color: authColors.textPrimary,
+    backgroundColor: authColors.white,
     height: 48,
   },
   inputIcon: {
@@ -274,7 +276,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: fontSize.cardSubtitle,
-    color: colors.error,
+    color: authColors.error,
     textAlign: 'center',
     marginTop: 4,
   },
@@ -282,7 +284,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     height: 48,
     borderRadius: borderRadius.cardSm,
-    backgroundColor: colors.primary,
+    backgroundColor: authColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -294,7 +296,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   submitText: {
-    color: colors.white,
+    color: authColors.white,
     fontSize: fontSize.xl,
     fontWeight: fontWeight.semibold,
     marginRight: spacing.sm,
@@ -305,7 +307,7 @@ const styles = StyleSheet.create({
   },
   forgotText: {
     fontSize: fontSize.cardTitle,
-    color: colors.primary,
+    color: authColors.primary,
     textDecorationLine: 'underline',
   },
   registerWrapper: {
@@ -317,22 +319,22 @@ const styles = StyleSheet.create({
   },
   registerPrompt: {
     fontSize: fontSize.cardTitle,
-    color: colors.textSecondary,
+    color: authColors.textSecondary,
   },
   registerLink: {
     fontSize: fontSize.cardTitle,
-    color: colors.primary,
+    color: authColors.primary,
     fontWeight: fontWeight.semibold,
   },
   demoContainer: {
     marginTop: spacing.xl,
     paddingTop: spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: authColors.border,
   },
   demoText: {
     fontSize: fontSize.cardMeta,
-    color: colors.textSecondary,
+    color: authColors.textSecondary,
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
@@ -346,21 +348,21 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.iconMargin,
     borderRadius: borderRadius.pill,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: authColors.border,
     backgroundColor: 'transparent',
     marginHorizontal: 4,
     marginVertical: 4,
   },
   demoButtonHighlighted: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: authColors.primary,
+    borderColor: authColors.primary,
   },
   demoButtonText: {
     fontSize: fontSize.cardMeta,
-    color: colors.textPrimary,
+    color: authColors.textPrimary,
   },
   demoButtonTextHighlighted: {
-    color: colors.white,
+    color: authColors.white,
     fontWeight: fontWeight.semibold,
   },
   footer: {
@@ -369,6 +371,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: fontSize.cardMeta,
-    color: colors.textSecondary,
+    color: authColors.textSecondary,
   },
 });
+

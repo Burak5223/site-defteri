@@ -91,14 +91,58 @@ public class DashboardController {
      * Kullanıcının rolüne göre uygun dashboard'u döner
      */
     @GetMapping("/dashboard")
-    public ResponseEntity<DashboardStatsResponse> getDefaultDashboard(Authentication authentication) {
+    public ResponseEntity<DashboardStatsResponse> getDefaultDashboard(
+            Authentication authentication,
+            @org.springframework.web.bind.annotation.RequestHeader(value = "Authorization", required = false) String authHeader) {
         if (authentication == null) {
             return ResponseEntity.ok(new DashboardStatsResponse());
         }
 
         String userId = authentication.getName();
-        // Super admin için super admin stats
-        // Diğerleri için kendi site stats'ı
-        return ResponseEntity.ok(dashboardService.getSuperAdminStats());
+        
+        // JWT token'dan siteId'yi çıkar
+        String siteId = extractSiteIdFromToken(authHeader);
+        
+        // Kullanıcının rolünü kontrol et
+        boolean isSuperAdmin = authentication.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_SUPER_ADMIN"));
+        
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+        
+        if (isSuperAdmin) {
+            // Super admin için tüm siteler
+            return ResponseEntity.ok(dashboardService.getSuperAdminStats());
+        } else if (isAdmin && siteId != null) {
+            // Admin için site dashboard
+            return ResponseEntity.ok(dashboardService.getSiteDashboard(siteId));
+        } else {
+            // Resident, Security, Cleaning için kişisel dashboard
+            return ResponseEntity.ok(dashboardService.getResidentDashboard(userId));
+        }
+    }
+    
+    private String extractSiteIdFromToken(String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            try {
+                String token = authHeader.substring(7);
+                // JWT token'ı parse et (base64 decode)
+                String[] parts = token.split("\\.");
+                if (parts.length >= 2) {
+                    String payload = new String(java.util.Base64.getUrlDecoder().decode(parts[1]));
+                    // JSON'dan siteId'yi çıkar
+                    if (payload.contains("\"siteId\"")) {
+                        int start = payload.indexOf("\"siteId\":\"") + 10;
+                        int end = payload.indexOf("\"", start);
+                        if (start > 9 && end > start) {
+                            return payload.substring(start, end);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Ignore parsing errors
+            }
+        }
+        return null;
     }
 }

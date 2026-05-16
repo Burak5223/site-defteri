@@ -31,14 +31,17 @@ import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { ticketService, Ticket } from '../../services/ticket.service';
-import { lightTheme as theme } from '../../theme';
+import { colors, lightTheme as theme } from '../../theme';
 import { useI18n } from '../../context/I18nContext';
+import { useTheme } from '../../context/ThemeContext';
 
 type TabKey = 'all' | 'open' | 'in_progress' | 'resolved';
 
 const TicketsScreen = () => {
   const { t } = useI18n();
   const { user, hasRole } = useAuth();
+  const { colors: themeColors } = useTheme();
+  const styles = React.useMemo(() => createStyles(themeColors), [themeColors]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -266,11 +269,11 @@ const TicketsScreen = () => {
     switch (priority) {
       case 'high': return { label: t('tickets.high'), bg: '#fef2f2', color: '#ef4444' };
       case 'medium': return { label: t('tickets.medium'), bg: '#fffbeb', color: '#f59e0b' };
-      case 'low': return { label: t('tickets.low'), bg: '#f1f5f9', color: '#64748b' };
+      case 'low': return { label: t('tickets.low'), bg: '#f1f5f9', color: colors.textSecondary };
       // Eski değerler için backward compatibility
       case 'yuksek': return { label: t('tickets.high'), bg: '#fef2f2', color: '#ef4444' };
       case 'orta': return { label: t('tickets.medium'), bg: '#fffbeb', color: '#f59e0b' };
-      case 'dusuk': return { label: t('tickets.low'), bg: '#f1f5f9', color: '#64748b' };
+      case 'dusuk': return { label: t('tickets.low'), bg: '#f1f5f9', color: colors.textSecondary };
       default: return { label: t('tickets.medium'), bg: '#fffbeb', color: '#f59e0b' };
     }
   };
@@ -294,9 +297,9 @@ const TicketsScreen = () => {
       case 'resolved':
         return { bg: '#d1fae5', color: '#10b981' }; // Yeşil
       case 'closed':
-        return { bg: '#e5e7eb', color: '#6b7280' }; // Gri
+        return { bg: '#e5e7eb', color: colors.textSecondary }; // Gri
       default:
-        return { bg: '#f1f5f9', color: '#64748b' };
+        return { bg: '#f1f5f9', color: colors.textSecondary };
     }
   };
 
@@ -310,16 +313,16 @@ const TicketsScreen = () => {
   };
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: themeColors.backgroundSecondary }]}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: themeColors.background, borderBottomColor: themeColors.border }]}>
           <View style={styles.headerLeft}>
             <View style={styles.settingsIcon}>
               <Settings size={20} color="#6b7280" />
             </View>
             <View>
-              <Text style={styles.siteName}>{t('ui.siteName')}</Text>
-              <Text style={styles.siteRole}>{roleText}</Text>
+              <Text style={[styles.siteName, { color: themeColors.textPrimary }]}>{t('ui.siteName')}</Text>
+              <Text style={[styles.siteRole, { color: themeColors.textSecondary }]}>{roleText}</Text>
             </View>
           </View>
           <Pressable style={styles.menuIcon}>
@@ -330,26 +333,26 @@ const TicketsScreen = () => {
         <View style={styles.container}>
 
         {/* Search */}
-        <View style={styles.searchContainer}>
+        <View style={[styles.searchContainer, { backgroundColor: themeColors.background, borderColor: themeColors.border }]}>
             <Search size={18} color="#94a3b8" style={{ marginRight: 8 }} />
             <TextInput
-                style={styles.searchInput}
+                style={[styles.searchInput, { color: themeColors.textPrimary }]}
                 placeholder={t('tickets.searchPlaceholder')}
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={themeColors.textTertiary}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
             />
         </View>
 
         {/* Tabs */}
-        <View style={styles.tabsContainer}>
+        <View style={[styles.tabsContainer, { backgroundColor: themeColors.backgroundTertiary }]}>
             {(['all', 'open', 'in_progress', 'resolved'] as TabKey[]).map((tab) => (
                 <Pressable
                     key={tab}
-                    style={[styles.tab, activeTab === tab && styles.activeTab]}
+                    style={[styles.tab, activeTab === tab && [styles.activeTab, { backgroundColor: themeColors.background }]]}
                     onPress={() => setActiveTab(tab)}
                 >
-                    <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+                    <Text style={[styles.tabText, { color: themeColors.textSecondary }, activeTab === tab && [styles.activeTabText, { color: themeColors.primary }]]}>
                         {tab === 'all' ? t('common.all') : tab === 'open' ? t('tickets.open') : tab === 'in_progress' ? t('tickets.inProgress') : t('tickets.resolved')}
                     </Text>
                 </Pressable>
@@ -359,13 +362,13 @@ const TicketsScreen = () => {
         {/* List */}
         {isLoading ? (
             <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color={theme.colors.primary} />
+                <ActivityIndicator size="large" color={themeColors.primary} />
             </View>
         ) : (
             <ScrollView
                 style={styles.content}
                 contentContainerStyle={{ paddingBottom: 100 }}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[themeColors.primary]} />}
             >
                 {filteredTickets.length === 0 ? (
                     <View style={styles.emptyState}>
@@ -381,25 +384,25 @@ const TicketsScreen = () => {
                             const statusColor = getStatusColor(ticket.status);
 
                             return (
-                                <View key={ticket.id} style={[styles.card, isResolved && styles.cardResolved]}>
+                                <View key={ticket.id} style={[styles.card, { backgroundColor: themeColors.background, borderColor: themeColors.border }, isResolved && [styles.cardResolved, { backgroundColor: themeColors.backgroundSecondary }]]}>
                                     <View style={styles.cardHeader}>
                                         <View style={[styles.iconBox, isResolved && styles.iconBoxResolved]}>
                                             <Icon size={20} color={isResolved ? '#94a3b8' : theme.colors.primary} />
                                         </View>
                                         <View style={styles.cardContent}>
                                             <View style={styles.cardTitleRow}>
-                                                <Text style={[styles.cardTitle, isResolved && styles.cardTitleResolved]}>{ticket.title}</Text>
+                                                <Text style={[styles.cardTitle, { color: themeColors.textPrimary }, isResolved && [styles.cardTitleResolved, { color: themeColors.textTertiary }]]}>{ticket.title}</Text>
                                                 <View style={[styles.statusBadge, { backgroundColor: statusColor.bg }]}>
                                                     <Text style={[styles.statusText, { color: statusColor.color }]}>{getStatusLabel(ticket.status)}</Text>
                                                 </View>
                                             </View>
-                                            <Text style={[styles.cardDesc, isResolved && styles.cardDescResolved]} numberOfLines={2}>{ticket.description}</Text>
+                                            <Text style={[styles.cardDesc, { color: themeColors.textSecondary }, isResolved && [styles.cardDescResolved, { color: themeColors.textTertiary }]]} numberOfLines={2}>{ticket.description}</Text>
                                             
                                             <View style={styles.cardFooter}>
                                                 <View style={[styles.priorityBadge, { backgroundColor: priority.bg }]}>
                                                     <Text style={[styles.priorityText, { color: priority.color }]}>{priority.label}</Text>
                                                 </View>
-                                                <Text style={styles.dateText}>{formatDate(ticket.createdAt)}</Text>
+                                                <Text style={[styles.dateText, { color: themeColors.textTertiary }]}>{formatDate(ticket.createdAt)}</Text>
                                             </View>
                                         </View>
                                     </View>
@@ -420,7 +423,7 @@ const TicketsScreen = () => {
         )}
 
         {/* Footer Button - Admin ve Sakin için (herkes arıza bildirebilir) */}
-        <View style={styles.footer}>
+        <View style={[styles.footer, { backgroundColor: themeColors.background, borderTopColor: themeColors.border }]}>
             <Pressable
                 style={styles.footerButton}
                 onPress={() => setShowCreateModal(true)}
@@ -433,10 +436,10 @@ const TicketsScreen = () => {
         {/* Create Ticket Modal */}
         <Modal visible={showCreateModal} animationType="slide" transparent>
             <View style={styles.modalOverlay}>
-                <View style={styles.modalContent}>
-                    <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>{t('tickets.newTicket')}</Text>
-                        <Text style={styles.modalSubtitle}>{t('tickets.newTicketSubtitle')}</Text>
+                <View style={[styles.modalContent, { backgroundColor: themeColors.background }]}>
+                    <View style={[styles.modalHeader, { borderBottomColor: themeColors.borderLight }]}>
+                        <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>{t('tickets.newTicket')}</Text>
+                        <Text style={[styles.modalSubtitle, { color: themeColors.textSecondary }]}>{t('tickets.newTicketSubtitle')}</Text>
                         <TouchableOpacity onPress={() => setShowCreateModal(false)} style={styles.closeButtonTop}>
                             <X size={24} color="#64748b" />
                         </TouchableOpacity>
@@ -444,16 +447,16 @@ const TicketsScreen = () => {
                     
                     <ScrollView style={styles.formScroll}>
                         <View style={styles.formGroup}>
-                            <Text style={styles.label}>{t('tickets.titleLabel')} *</Text>
+                            <Text style={[styles.label, { color: themeColors.textPrimary }]}>{t('tickets.titleLabel')} *</Text>
                             <TextInput 
-                                style={styles.input}
+                                style={[styles.input, { backgroundColor: themeColors.background, borderColor: themeColors.border, color: themeColors.textPrimary }]}
                                 value={newTicket.title}
                                 onChangeText={t => setNewTicket(prev => ({...prev, title: t}))}
                                 placeholder={t('tickets.titlePlaceholder')}
                             />
                         </View>
                         <View style={styles.formGroup}>
-                            <Text style={styles.label}>{t('tickets.descriptionLabel')} *</Text>
+                            <Text style={[styles.label, { color: themeColors.textPrimary }]}>{t('tickets.descriptionLabel')} *</Text>
                             <TextInput 
                                 style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
                                 value={newTicket.description}
@@ -463,7 +466,7 @@ const TicketsScreen = () => {
                             />
                         </View>
                         <View style={styles.formGroup}>
-                            <Text style={styles.label}>{t('tickets.categoryLabel')}</Text>
+                            <Text style={[styles.label, { color: themeColors.textPrimary }]}>{t('tickets.categoryLabel')}</Text>
                             <View style={styles.pillsRow}>
                                 {['maintenance', 'plumbing', 'electrical', 'other'].map(cat => (
                                     <TouchableOpacity 
@@ -479,7 +482,7 @@ const TicketsScreen = () => {
                             </View>
                         </View>
                         <View style={styles.formGroup}>
-                            <Text style={styles.label}>{t('tickets.priorityLabel')}</Text>
+                            <Text style={[styles.label, { color: themeColors.textPrimary }]}>{t('tickets.priorityLabel')}</Text>
                             <View style={styles.pillsRow}>
                                 {(['low', 'medium', 'high'] as const).map(prio => (
                                     <TouchableOpacity 
@@ -496,14 +499,14 @@ const TicketsScreen = () => {
                         </View>
 
                         <View style={styles.formGroup}>
-                            <Text style={styles.label}>{t('tickets.photosLabel')}</Text>
+                            <Text style={[styles.label, { color: themeColors.textPrimary }]}>{t('tickets.photosLabel')}</Text>
                             <View style={styles.photoSection}>
                                 <TouchableOpacity style={styles.photoButton} onPress={takePhoto}>
-                                    <Camera size={20} color={theme.colors.primary} />
+                                    <Camera size={20} color={themeColors.primary} />
                                     <Text style={styles.photoButtonText}>{t('tickets.takePhoto')}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={styles.photoButton} onPress={pickImage}>
-                                    <ImageIcon size={20} color={theme.colors.primary} />
+                                    <ImageIcon size={20} color={themeColors.primary} />
                                     <Text style={styles.photoButtonText}>{t('tickets.selectFromGallery')}</Text>
                                 </TouchableOpacity>
                             </View>
@@ -537,10 +540,10 @@ const TicketsScreen = () => {
         {/* Manage Ticket Modal (Admin Only) */}
         <Modal visible={showManageModal} animationType="slide" transparent>
             <View style={styles.modalOverlay}>
-                <View style={styles.modalContent}>
-                    <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>{t('tickets.ticketManagement')}</Text>
-                        <Text style={styles.modalSubtitle}>{t('tickets.ticketManagementSubtitle')}</Text>
+                <View style={[styles.modalContent, { backgroundColor: themeColors.background }]}>
+                    <View style={[styles.modalHeader, { borderBottomColor: themeColors.borderLight }]}>
+                        <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>{t('tickets.ticketManagement')}</Text>
+                        <Text style={[styles.modalSubtitle, { color: themeColors.textSecondary }]}>{t('tickets.ticketManagementSubtitle')}</Text>
                         <TouchableOpacity onPress={() => setShowManageModal(false)} style={styles.closeButtonTop}>
                             <X size={24} color="#64748b" />
                         </TouchableOpacity>
@@ -555,7 +558,7 @@ const TicketsScreen = () => {
                                 </View>
 
                                 <View style={styles.formGroup}>
-                                    <Text style={styles.label}>{t('tickets.status')}</Text>
+                                    <Text style={[styles.label, { color: themeColors.textPrimary }]}>{t('tickets.status')}</Text>
                                     <View style={styles.pillsRow}>
                                         {[
                                             { value: 'open', label: t('tickets.open'), icon: AlertTriangle },
@@ -577,24 +580,24 @@ const TicketsScreen = () => {
                                 </View>
 
                                 <View style={styles.formGroup}>
-                                    <Text style={styles.label}>{t('tickets.assignedTo')}</Text>
+                                    <Text style={[styles.label, { color: themeColors.textPrimary }]}>{t('tickets.assignedTo')}</Text>
                                     <TextInput 
-                                        style={styles.input}
+                                        style={[styles.input, { backgroundColor: themeColors.background, borderColor: themeColors.border, color: themeColors.textPrimary }]}
                                         value={assignedPerson}
                                         onChangeText={setAssignedPerson}
                                         placeholder={t('tickets.notAssigned')}
-                                        placeholderTextColor="#94a3b8"
+                                        placeholderTextColor={themeColors.textTertiary}
                                     />
                                 </View>
 
                                 <View style={styles.formGroup}>
-                                    <Text style={styles.label}>{t('tickets.solutionNote')}</Text>
+                                    <Text style={[styles.label, { color: themeColors.textPrimary }]}>{t('tickets.solutionNote')}</Text>
                                     <TextInput 
                                         style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
                                         value={solutionNote}
                                         onChangeText={setSolutionNote}
                                         placeholder={t('tickets.solutionNotePlaceholder')}
-                                        placeholderTextColor="#94a3b8"
+                                        placeholderTextColor={themeColors.textTertiary}
                                         multiline
                                     />
                                 </View>
@@ -627,10 +630,10 @@ const TicketsScreen = () => {
 
 export default TicketsScreen;
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
     root: {
         flex: 1,
-        backgroundColor: '#f8f9fa',
+        backgroundColor: colors.backgroundSecondary,
     },
     header: {
         flexDirection: 'row',
@@ -638,9 +641,9 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 16,
         paddingVertical: 12,
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.background,
         borderBottomWidth: 1,
-        borderBottomColor: '#e5e7eb',
+        borderBottomColor: colors.border,
     },
     headerLeft: {
         flexDirection: 'row',
@@ -651,18 +654,18 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#f3f4f6',
+        backgroundColor: colors.backgroundTertiary,
         alignItems: 'center',
         justifyContent: 'center',
     },
     siteName: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#1f2937',
+        color: colors.textPrimary,
     },
     siteRole: {
         fontSize: 12,
-        color: '#6b7280',
+        color: colors.textSecondary,
     },
     menuIcon: {
         padding: 8,
@@ -673,19 +676,19 @@ const styles = StyleSheet.create({
     searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.background,
         margin: 16,
         paddingHorizontal: 12,
         borderRadius: 12,
         height: 44,
         borderWidth: 1,
-        borderColor: '#e2e8f0',
+        borderColor: colors.border,
     },
     searchInput: {
         flex: 1,
         height: 44,
         fontSize: 14,
-        color: '#0f172a',
+        color: colors.textPrimary,
     },
     tabsContainer: {
         flexDirection: 'row',
@@ -702,12 +705,12 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     activeTab: {
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.background,
     },
     tabText: {
         fontSize: 12,
         fontWeight: '500',
-        color: '#64748b',
+        color: colors.textSecondary,
     },
     activeTabText: {
         color: theme.colors.primary,
@@ -731,18 +734,18 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         marginTop: 12,
-        color: '#94a3b8',
+        color: colors.textTertiary,
     },
     card: {
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.background,
         borderRadius: 16,
         padding: 16,
         borderWidth: 1,
-        borderColor: '#e2e8f0',
+        borderColor: colors.border,
     },
     cardResolved: {
         opacity: 0.6,
-        backgroundColor: '#f8fafc',
+        backgroundColor: colors.backgroundSecondary,
     },
     cardHeader: {
         flexDirection: 'row',
@@ -770,12 +773,12 @@ const styles = StyleSheet.create({
     cardTitle: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#0f172a',
+        color: colors.textPrimary,
         flex: 1,
         marginRight: 8,
     },
     cardTitleResolved: {
-        color: '#94a3b8',
+        color: colors.textTertiary,
     },
     statusBadge: {
         backgroundColor: '#f1f5f9',
@@ -788,21 +791,21 @@ const styles = StyleSheet.create({
     },
     statusText: {
         fontSize: 10,
-        color: '#475569',
+        color: colors.textSecondary,
         fontWeight: '500',
     },
     statusTextResolved: {
-        color: '#94a3b8',
+        color: colors.textTertiary,
     },
     cardDesc: {
         fontSize: 12,
-        color: '#64748b',
+        color: colors.textSecondary,
         marginTop: 4,
         marginBottom: 8,
         lineHeight: 18,
     },
     cardDescResolved: {
-        color: '#94a3b8',
+        color: colors.textTertiary,
     },
     cardFooter: {
         flexDirection: 'row',
@@ -820,7 +823,7 @@ const styles = StyleSheet.create({
     },
     dateText: {
         fontSize: 10,
-        color: '#94a3b8',
+        color: colors.textTertiary,
     },
     modalOverlay: {
         flex: 1,
@@ -828,7 +831,7 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
     },
     modalContent: {
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.background,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         padding: 24,
@@ -841,17 +844,17 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         paddingBottom: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#f1f5f9',
+        borderBottomColor: colors.borderLight,
     },
     modalTitle: {
         fontSize: 20,
         fontWeight: '700',
-        color: '#0f172a',
+        color: colors.textPrimary,
         marginBottom: 4,
     },
     modalSubtitle: {
         fontSize: 13,
-        color: '#64748b',
+        color: colors.textSecondary,
     },
     closeButtonTop: {
         position: 'absolute',
@@ -861,7 +864,7 @@ const styles = StyleSheet.create({
     closeButton: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#64748b',
+        color: colors.textSecondary,
     },
     formScroll: {
         flex: 1,
@@ -872,16 +875,16 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 14,
         fontWeight: '500',
-        color: '#334155',
+        color: colors.textPrimary,
         marginBottom: 8,
     },
     input: {
         borderWidth: 1,
-        borderColor: '#cbd5e1',
+        borderColor: colors.border,
         borderRadius: 12,
         padding: 12,
         fontSize: 14,
-        color: '#0f172a',
+        color: colors.textPrimary,
     },
     pillsRow: {
         flexDirection: 'row',
@@ -893,8 +896,8 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: '#e2e8f0',
-        backgroundColor: '#ffffff',
+        borderColor: colors.border,
+        backgroundColor: colors.background,
     },
     pillActive: {
         borderColor: theme.colors.primary,
@@ -902,7 +905,7 @@ const styles = StyleSheet.create({
     },
     pillText: {
         fontSize: 12,
-        color: '#64748b',
+        color: colors.textSecondary,
     },
     pillTextActive: {
         color: '#ffffff',
@@ -926,9 +929,9 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         padding: 16,
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.background,
         borderTopWidth: 1,
-        borderTopColor: '#e5e7eb',
+        borderTopColor: colors.border,
     },
     footerButton: {
         flexDirection: 'row',
@@ -961,7 +964,7 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#e2e8f0',
+        borderColor: colors.border,
         backgroundColor: 'rgba(15, 118, 110, 0.05)',
     },
     photoButtonText: {
@@ -971,7 +974,7 @@ const styles = StyleSheet.create({
     },
     photoHint: {
         fontSize: 11,
-        color: '#94a3b8',
+        color: colors.textTertiary,
         marginTop: 8,
     },
     imagePreviewContainer: {
@@ -1019,10 +1022,10 @@ const styles = StyleSheet.create({
         color: theme.colors.primary,
     },
     manageButtonTextResolved: {
-        color: '#94a3b8',
+        color: colors.textTertiary,
     },
     ticketInfoCard: {
-        backgroundColor: '#f8fafc',
+        backgroundColor: colors.backgroundSecondary,
         borderRadius: 12,
         padding: 16,
         marginBottom: 20,
@@ -1030,12 +1033,12 @@ const styles = StyleSheet.create({
     ticketInfoTitle: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#0f172a',
+        color: colors.textPrimary,
         marginBottom: 8,
     },
     ticketInfoDesc: {
         fontSize: 13,
-        color: '#64748b',
+        color: colors.textSecondary,
         lineHeight: 20,
     },
     statusPill: {
@@ -1047,8 +1050,8 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         borderRadius: 10,
         borderWidth: 1,
-        borderColor: '#e2e8f0',
-        backgroundColor: '#ffffff',
+        borderColor: colors.border,
+        backgroundColor: colors.background,
     },
     statusPillActive: {
         borderColor: theme.colors.primary,
@@ -1057,7 +1060,7 @@ const styles = StyleSheet.create({
     statusPillText: {
         fontSize: 12,
         fontWeight: '500',
-        color: '#64748b',
+        color: colors.textSecondary,
     },
     statusPillTextActive: {
         color: '#ffffff',
@@ -1076,14 +1079,14 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     modalButtonSecondary: {
-        backgroundColor: '#f8fafc',
+        backgroundColor: colors.backgroundSecondary,
         borderWidth: 1,
-        borderColor: '#e2e8f0',
+        borderColor: colors.border,
     },
     modalButtonSecondaryText: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#475569',
+        color: colors.textSecondary,
     },
     modalButtonPrimary: {
         backgroundColor: theme.colors.primary,
@@ -1094,3 +1097,7 @@ const styles = StyleSheet.create({
         color: '#ffffff',
     },
 });
+
+
+
+

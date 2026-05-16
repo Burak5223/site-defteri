@@ -53,6 +53,9 @@ public class PackageResponse {
     private Long aiExtractionLogId;
     private Long matchedNotificationId;
     
+    // Delivery Code - Optional code from courier company
+    private String deliveryCode;  // Resident can enter this code
+    
     // NOT: recorded_by ve delivered_to dahil edilmez (KVKK)
     // Sadece admin endpoint'inde gösterilir
 }

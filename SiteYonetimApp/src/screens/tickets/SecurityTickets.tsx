@@ -409,8 +409,8 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.screenPaddingHorizontal, paddingVertical: spacing.lg, paddingBottom: 100, rowGap: spacing.sectionGap },
   searchWrapper: { position: 'relative' },
   searchIcon: { position: 'absolute', left: 10, top: '50%', marginTop: -8 },
-  searchInput: { borderRadius: 999, backgroundColor: '#f3f4f6', paddingLeft: 32, paddingRight: 12, paddingVertical: 8, fontSize: 14, color: colors.textPrimary },
-  tabsWrapper: { flexDirection: 'row', borderRadius: 999, backgroundColor: '#f3f4f6', padding: 3 },
+  searchInput: { borderRadius: 999, backgroundColor: colors.backgroundTertiary, paddingLeft: 32, paddingRight: 12, paddingVertical: 8, fontSize: 14, color: colors.textPrimary },
+  tabsWrapper: { flexDirection: 'row', borderRadius: 999, backgroundColor: colors.backgroundTertiary, padding: 3 },
   tab: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 6, borderRadius: 999 },
   tabActive: { backgroundColor: colors.white },
   tabText: { fontSize: 12, color: colors.textSecondary },
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: colors.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '90%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: 20, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.borderLight },
   modalTitle: { fontSize: 20, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
   modalSubtitle: { fontSize: 13, color: colors.textSecondary },
   modalBody: { padding: 20, maxHeight: 500 },
@@ -491,11 +491,12 @@ const styles = StyleSheet.create({
   typeButtonActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   typeButtonText: { fontSize: 13, fontWeight: '600', color: '#64748b' },
   typeButtonTextActive: { color: colors.white },
-  modalFooter: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: '#f1f5f9' },
-  modalCancelButton: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center' },
+  modalFooter: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: colors.borderLight },
+  modalCancelButton: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.backgroundSecondary, borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center' },
   modalCancelButtonText: { fontSize: 15, fontWeight: '600', color: '#475569' },
   modalCreateButton: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center' },
   modalCreateButtonText: { fontSize: 15, fontWeight: '600', color: colors.white },
 });
 
 export default SecurityTickets;
+

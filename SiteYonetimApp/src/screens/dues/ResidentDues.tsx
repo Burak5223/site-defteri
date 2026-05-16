@@ -25,17 +25,20 @@ import {
 } from 'lucide-react-native';
 import * as Print from 'expo-print';
 import * as FileSystem from 'expo-file-system';
-import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
+import { spacing, borderRadius, fontSize, fontWeight } from '../../theme';
 import { dueService, Due } from '../../services/due.service';
 import { paymentService } from '../../services/payment.service';
 import { currencyService, CurrencyRate } from '../../services/currency.service';
 import { formatAmount, formatPaymentDate, getPaymentMethodName, getPaymentStatusName } from '../../utils/paymentHelpers';
 import { useI18n } from '../../context/I18nContext';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 
 const ResidentDues = () => {
   const { t } = useI18n();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [selectedDue, setSelectedDue] = useState<any>(null);
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [dues, setDues] = useState<Due[]>([]);
@@ -639,7 +642,7 @@ const ResidentDues = () => {
 
         <View style={styles.summaryGrid}>
           <View style={[styles.summaryCard, { backgroundColor: 'rgba(239,68,68,0.1)' }]}>
-            <View style={[styles.summaryIcon, { backgroundColor: colors.white }]}>
+            <View style={[styles.summaryIcon, { backgroundColor: colors.background }]}>
               <CreditCard size={20} color={colors.error} />
             </View>
             <Text style={styles.summaryLabel}>TOPLAM BORÇ</Text>
@@ -648,7 +651,7 @@ const ResidentDues = () => {
           </View>
 
           <View style={[styles.summaryCard, { backgroundColor: 'rgba(34,197,94,0.1)' }]}>
-            <View style={[styles.summaryIcon, { backgroundColor: colors.white }]}>
+            <View style={[styles.summaryIcon, { backgroundColor: colors.background }]}>
               <CheckCircle size={20} color={colors.success} />
             </View>
             <Text style={styles.summaryLabel}>ÖDENEN</Text>
@@ -1169,10 +1172,10 @@ const ResidentDues = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.backgroundSecondary },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.white, padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background, padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border },
   headerIcon: { width: 40, height: 40, borderRadius: borderRadius.icon, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center', marginRight: spacing.md },
   headerTitle: { fontSize: fontSize.cardTitle, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   headerSubtitle: { fontSize: fontSize.cardSubtitle, color: colors.textSecondary, marginTop: 2 },
@@ -1184,7 +1187,7 @@ const styles = StyleSheet.create({
   summaryLabel: { fontSize: fontSize.cardMeta, fontWeight: fontWeight.semibold, color: colors.textSecondary, marginBottom: 4 },
   summaryValue: { fontSize: 20, fontWeight: fontWeight.bold, marginBottom: 2 },
   summarySubtitle: { fontSize: fontSize.cardSubtitle, color: colors.textSecondary },
-  financeInfoCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.white, borderRadius: borderRadius.card, padding: spacing.lg, marginBottom: spacing.lg, borderWidth: 1, borderColor: colors.border },
+  financeInfoCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background, borderRadius: borderRadius.card, padding: spacing.lg, marginBottom: spacing.lg, borderWidth: 1, borderColor: colors.border },
   financeInfoIcon: { width: 40, height: 40, borderRadius: borderRadius.icon, alignItems: 'center', justifyContent: 'center', marginRight: spacing.md },
   financeInfoContent: { flex: 1 },
   financeInfoTitle: { fontSize: fontSize.cardTitle, fontWeight: fontWeight.semibold, color: colors.textPrimary, marginBottom: 2 },
@@ -1193,12 +1196,12 @@ const styles = StyleSheet.create({
   payAllButtonText: { fontSize: fontSize.buttonTextLg, fontWeight: fontWeight.semibold, color: colors.white },
   payAllHint: { fontSize: fontSize.cardMeta, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.lg },
   filterRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
-  filterButton: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: borderRadius.pill, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border },
+  filterButton: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: borderRadius.pill, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border },
   filterButtonActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   filterButtonText: { fontSize: fontSize.cardSubtitle, color: colors.textSecondary },
   filterButtonTextActive: { color: colors.white, fontWeight: fontWeight.semibold },
   duesList: { gap: spacing.md },
-  dueCard: { backgroundColor: colors.white, borderRadius: borderRadius.card, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
+  dueCard: { backgroundColor: colors.background, borderRadius: borderRadius.card, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
   dueCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md },
   dueCardLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   dueCardIcon: { width: 40, height: 40, borderRadius: borderRadius.icon, alignItems: 'center', justifyContent: 'center', marginRight: spacing.md },
@@ -1221,7 +1224,7 @@ const styles = StyleSheet.create({
   },
   downloadButtonText: { fontSize: fontSize.buttonText, fontWeight: fontWeight.semibold, color: colors.textSecondary },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: colors.white, borderTopLeftRadius: borderRadius.cardLg, borderTopRightRadius: borderRadius.cardLg, padding: spacing.xl, maxHeight: '90%' },
+  modalContent: { backgroundColor: colors.background, borderTopLeftRadius: borderRadius.cardLg, borderTopRightRadius: borderRadius.cardLg, padding: spacing.xl, maxHeight: '90%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg },
   modalTitle: { fontSize: fontSize['2xl'], fontWeight: fontWeight.bold, color: colors.textPrimary },
   modalBody: { paddingBottom: spacing.xl },
@@ -1247,17 +1250,17 @@ const styles = StyleSheet.create({
   installmentLabel: { fontSize: fontSize.cardSubtitle, fontWeight: fontWeight.semibold, color: colors.textSecondary, marginBottom: 2 },
   installmentLabelActive: { color: colors.primary },
   installmentCommission: { fontSize: fontSize.cardMeta, color: colors.textSecondary },
-  paymentMethod: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.white, borderRadius: borderRadius.md, padding: spacing.lg, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.border },
+  paymentMethod: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background, borderRadius: borderRadius.md, padding: spacing.lg, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.border },
   paymentMethodActive: { backgroundColor: colors.primaryLight, borderColor: colors.primary, borderWidth: 2 },
   paymentMethodIcon: { width: 40, height: 40, borderRadius: borderRadius.icon, alignItems: 'center', justifyContent: 'center', marginRight: spacing.md },
   paymentMethodInfo: { flex: 1 },
   paymentMethodTitle: { fontSize: fontSize.cardTitle, fontWeight: fontWeight.semibold, color: colors.textPrimary, marginBottom: 2 },
   paymentMethodSubtitle: { fontSize: fontSize.cardSubtitle, color: colors.textSecondary },
-  paymentMethodRadio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.white },
+  paymentMethodRadio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.background },
   paymentMethodRadioActive: { borderColor: colors.primary, backgroundColor: colors.primary },
   inputGroup: { marginBottom: spacing.md },
   inputLabel: { fontSize: fontSize.cardSubtitle, color: colors.textSecondary, marginBottom: spacing.sm, fontWeight: fontWeight.medium },
-  input: { backgroundColor: colors.white, borderRadius: borderRadius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border, fontSize: fontSize.cardTitle, color: colors.textPrimary },
+  input: { backgroundColor: colors.background, borderRadius: borderRadius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border, fontSize: fontSize.cardTitle, color: colors.textPrimary },
   inputError: { borderColor: colors.error, borderWidth: 2 },
   errorText: { fontSize: fontSize.cardMeta, color: colors.error, marginTop: 4, marginLeft: 4 },
   inputRow: { flexDirection: 'row', gap: spacing.md },
@@ -1276,7 +1279,7 @@ const styles = StyleSheet.create({
   installmentInfoText: { fontSize: fontSize.cardMeta, color: colors.primary, textAlign: 'center', fontWeight: fontWeight.medium },
   lastUpdateText: { fontSize: fontSize.cardMeta, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.sm, fontStyle: 'italic' },
   contractCheckbox: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.lg, paddingHorizontal: spacing.sm },
-  checkbox: { width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.white, marginRight: spacing.sm, marginTop: 2, alignItems: 'center', justifyContent: 'center' },
+  checkbox: { width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.background, marginRight: spacing.sm, marginTop: 2, alignItems: 'center', justifyContent: 'center' },
   checkboxActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   contractText: { flex: 1, fontSize: fontSize.cardSubtitle, color: colors.textSecondary, lineHeight: 20 },
   contractLink: { color: colors.primary, fontWeight: fontWeight.semibold, textDecorationLine: 'underline' },
@@ -1286,7 +1289,7 @@ const styles = StyleSheet.create({
   modalPayButton: { flex: 1, paddingVertical: spacing.lg, borderRadius: borderRadius.button, backgroundColor: colors.primary, alignItems: 'center' },
   modalPayButtonDisabled: { backgroundColor: colors.gray400, opacity: 0.6 },
   modalPayButtonText: { fontSize: fontSize.buttonText, fontWeight: fontWeight.semibold, color: colors.white },
-  transferModal: { backgroundColor: colors.white, borderRadius: borderRadius.cardLg, padding: spacing.xl, margin: spacing.xl },
+  transferModal: { backgroundColor: colors.background, borderRadius: borderRadius.cardLg, padding: spacing.xl, margin: spacing.xl },
   transferInfo: { marginVertical: spacing.lg },
   transferInfoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
   transferInfoLabel: { fontSize: fontSize.cardSubtitle, color: colors.textSecondary, fontWeight: fontWeight.medium },
@@ -1298,7 +1301,7 @@ const styles = StyleSheet.create({
   ownerExemptionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fef3c7',
+    backgroundColor: colors.warningLight,
     borderRadius: borderRadius.card,
     padding: spacing.lg,
     marginBottom: spacing.lg,
@@ -1309,7 +1312,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: borderRadius.icon,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
@@ -1328,7 +1331,7 @@ const styles = StyleSheet.create({
     color: '#78350f',
   },
   ownerRestrictionInfo: {
-    backgroundColor: '#fef3c7',
+    backgroundColor: colors.warningLight,
     padding: spacing.md,
     borderRadius: borderRadius.button,
     marginTop: spacing.sm,
@@ -1344,3 +1347,5 @@ const styles = StyleSheet.create({
 });
 
 export default ResidentDues;
+
+

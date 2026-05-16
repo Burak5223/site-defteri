@@ -19,6 +19,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import Svg, { Line, Circle, Text as SvgText, Polyline } from 'react-native-svg';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
+import { useTheme } from '../../context/ThemeContext';
 import { financeService } from '../../services/finance.service';
 import { useAuth } from '../../context/AuthContext';
 import { useI18n } from '../../context/I18nContext';
@@ -45,6 +46,8 @@ const chartHeight = 180;
 const ResidentFinance = () => {
   const { t } = useI18n();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -348,7 +351,7 @@ const ResidentFinance = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.backgroundSecondary,
@@ -361,7 +364,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     paddingHorizontal: spacing.screenPaddingHorizontal,
     paddingTop: spacing.lg,
     paddingBottom: spacing.lg,
@@ -410,7 +413,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: borderRadius.icon,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
@@ -439,7 +442,7 @@ const styles = StyleSheet.create({
   transactionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.card,
     padding: spacing.lg,
     borderWidth: 1,
@@ -476,7 +479,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
   },
   chartCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.card,
     padding: spacing.lg,
     marginBottom: spacing.xl,
@@ -512,3 +515,6 @@ const styles = StyleSheet.create({
 });
 
 export default ResidentFinance;
+
+
+

@@ -20,6 +20,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
 import { useNotifications } from '../context/NotificationContext';
+import { useTheme } from '../context/ThemeContext';
 import { SecurityPackages } from '../screens/packages/SecurityPackages';
 import { AICargoRegistration } from '../screens/packages/AICargoRegistration';
 import { SecurityTasks } from '../screens/tasks/SecurityTasks';
@@ -30,6 +31,7 @@ import CleaningTickets from '../screens/tickets/CleaningTickets';
 import CleaningMaintenance from '../screens/maintenance/CleaningMaintenance';
 import { QRScannerScreen } from '../screens/packages/QRScannerScreen';
 import SuperAdminScreen from '../screens/superadmin/SuperAdminScreen';
+import SuperAdminSitesScreen from '../screens/superadmin/SuperAdminSitesScreen';
 import SuperAdminQuickActions from '../screens/superadmin/SuperAdminQuickActions';
 import SuperAdminMessages from '../screens/superadmin/SuperAdminMessages';
 import SuperAdminProfile from '../screens/superadmin/SuperAdminProfile';
@@ -146,6 +148,7 @@ const DashboardStack = () => {
       <Stack.Screen name="QRScanner" component={QRScannerScreen} options={{ headerShown: true, title: 'QR Scanner' }} />
       <Stack.Screen name="Apartments" component={ApartmentsScreen} options={{ headerShown: true, title: t('nav.apartments') }} />
       <Stack.Screen name="SuperAdmin" component={SuperAdminScreen} options={{ headerShown: true, title: 'Super Admin' }} />
+      <Stack.Screen name="SuperAdminSites" component={SuperAdminSitesScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SuperAdminQuickActions" component={SuperAdminQuickActions} options={{ headerShown: true, title: 'Hızlı İşlemler' }} />
       <Stack.Screen name="SuperAdminMessages" component={SuperAdminMessages} options={{ headerShown: true, title: 'Mesajlar' }} />
       <Stack.Screen name="SuperAdminProfile" component={SuperAdminProfile} options={{ headerShown: true, title: 'Profil' }} />
@@ -157,6 +160,7 @@ const MoreMenuScreen = () => {
     const navigation = useNavigation<any>();
     const { signOut, hasRole, isImpersonating } = useAuth();
     const { t } = useI18n();
+    const { colors } = useTheme();
     
     
     
@@ -173,7 +177,7 @@ const MoreMenuScreen = () => {
         return [
           { label: 'Hızlı İşlemler', icon: ClipboardList, screen: 'SuperAdminQuickActions', roles: ['ROLE_SUPER_ADMIN'] },
           { label: 'Mesajlar', icon: MessageSquare, screen: 'SuperAdminMessages', roles: ['ROLE_SUPER_ADMIN'] },
-          { label: t('nav.sites'), icon: Building, screen: 'Sites', roles: ['ROLE_SUPER_ADMIN'] },
+          { label: t('nav.sites'), icon: Building, screen: 'SuperAdminSites', roles: ['ROLE_SUPER_ADMIN'] },
           { label: 'Profil', icon: UserCircle, screen: 'SuperAdminProfile', roles: ['ROLE_SUPER_ADMIN'] },
         ];
       }
@@ -248,7 +252,7 @@ const MoreMenuScreen = () => {
     const menuItems = getMenuItems();
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#fff' }}>
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
             <ScrollView 
                 style={{ flex: 1 }} 
                 contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 20 }}
@@ -262,16 +266,16 @@ const MoreMenuScreen = () => {
                                 flexDirection: 'row', 
                                 alignItems: 'center', 
                                 paddingVertical: 12, 
-                                backgroundColor: '#f3f4f6',
+                                backgroundColor: colors.backgroundTertiary,
                                 borderRadius: 8,
                                 paddingHorizontal: 15,
                                 borderWidth: 1,
-                                borderColor: '#e5e7eb',
+                                borderColor: colors.border,
                             }}
                             onPress={signOut}
                         >
-                            <UserCircle size={20} color="#2563eb" style={{ marginRight: 12 }} />
-                            <Text style={{ fontSize: 15, color: '#2563eb', fontWeight: '600' }}>
+                            <UserCircle size={20} color={colors.primary} style={{ marginRight: 12 }} />
+                            <Text style={{ fontSize: 15, color: colors.primary, fontWeight: '600' }}>
                                 Super Admin'e Dön
                             </Text>
                         </TouchableOpacity>
@@ -290,10 +294,10 @@ const MoreMenuScreen = () => {
                                     paddingVertical: 10, 
                                     paddingHorizontal: 12,
                                     marginBottom: 6,
-                                    backgroundColor: '#f9fafb',
+                                    backgroundColor: colors.backgroundSecondary,
                                     borderRadius: 6,
                                     borderWidth: 1,
-                                    borderColor: '#f3f4f6',
+                                    borderColor: colors.borderLight,
                                 }}
                                 onPress={() => {
                                     if (navigation) {
@@ -304,9 +308,9 @@ const MoreMenuScreen = () => {
                                 }}
                             >
                                 <View style={{ position: 'relative', marginRight: 12 }}>
-                                    <item.icon size={18} color="#4b5563" />
+                                    <item.icon size={18} color={colors.textSecondary} />
                                 </View>
-                                <Text style={{ fontSize: 14, color: '#1f2937', fontWeight: '500' }}>
+                                <Text style={{ fontSize: 14, color: colors.textPrimary, fontWeight: '500' }}>
                                     {item.label}
                                 </Text>
                             </TouchableOpacity>
@@ -319,9 +323,9 @@ const MoreMenuScreen = () => {
             <View style={{ 
                 paddingHorizontal: 20, 
                 paddingVertical: 15, 
-                backgroundColor: '#fff',
+                backgroundColor: colors.background,
                 borderTopWidth: 1,
-                borderTopColor: '#f3f4f6',
+                borderTopColor: colors.borderLight,
             }}>
                 <TouchableOpacity 
                     style={{ 
@@ -352,6 +356,7 @@ const MainNavigator = () => {
   const { hasRole, isImpersonating } = useAuth();
   const { t } = useI18n();
   const { unreadMessagesCount } = useNotifications();
+  const { colors } = useTheme();
   
   // Rol kontrolü
   const isResident = hasRole('ROLE_RESIDENT') && !isImpersonating;
@@ -364,14 +369,14 @@ const MainNavigator = () => {
     <Tab.Navigator
       initialRouteName="Dashboard"
       screenOptions={{
-        tabBarActiveTintColor: '#0f766e',
-        tabBarInactiveTintColor: '#6b7280',
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
           height: 90,
           paddingBottom: 30,
           paddingTop: 10,
-          borderTopColor: '#f3f4f6',
-          backgroundColor: '#ffffff',
+          borderTopColor: colors.border,
+          backgroundColor: colors.background,
           elevation: 8,
         },
         tabBarLabelStyle: {

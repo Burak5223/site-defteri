@@ -25,6 +25,7 @@ import {
   Key,
 } from 'lucide-react-native';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
+import { useTheme } from '../../context/ThemeContext';
 import { useI18n } from '../../context/I18nContext';
 import type { Language } from '../../i18n/translations';
 import { useFocusEffect } from '@react-navigation/native';
@@ -37,6 +38,8 @@ import { useAuth } from '../../context/AuthContext';
 const ResidentProfile = () => {
   const { user, signOut, switchApartment: switchApartmentContext } = useAuth();
   const { t, language, changeLanguage } = useI18n();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [editProfileModalVisible, setEditProfileModalVisible] = useState(false);
   const [changePasswordModalVisible, setChangePasswordModalVisible] = useState(false);
@@ -46,6 +49,9 @@ const ResidentProfile = () => {
     fullName: user?.fullName || 'Ahmet Yılmaz',
     email: user?.email || 'ahmet.yilmaz@example.com',
     phone: user?.phone || '+90 555 123 4567',
+    apartmentId: user?.apartmentId,
+    blockName: user?.blockName,
+    unitNumber: user?.unitNumber,
   });
 
   useFocusEffect(
@@ -57,11 +63,21 @@ const ResidentProfile = () => {
 
   const loadUserProfile = async () => {
     try {
-      const profile = await apiClient.get<{ fullName?: string; email?: string; phone?: string }>('/users/me');
+      const profile = await apiClient.get<{
+        fullName?: string;
+        email?: string;
+        phone?: string;
+        apartmentId?: string;
+        blockName?: string;
+        unitNumber?: string;
+      }>('/users/me');
       setCurrentUser({
         fullName: profile.fullName || 'Ahmet Yılmaz',
         email: profile.email || 'ahmet.yilmaz@example.com',
         phone: profile.phone || '+90 555 123 4567',
+        apartmentId: profile.apartmentId || user?.apartmentId,
+        blockName: profile.blockName || user?.blockName,
+        unitNumber: profile.unitNumber || user?.unitNumber,
       });
     } catch (error) {
       console.error('Failed to load user profile:', error);
@@ -107,6 +123,22 @@ const ResidentProfile = () => {
   ];
 
   const currentLanguage = languages.find(lang => lang.code === language);
+
+  const getApartmentLabel = () => {
+    const blockName = currentUser.blockName || user?.blockName;
+    const unitNumber = currentUser.unitNumber || user?.unitNumber;
+    if (blockName && unitNumber) {
+      return `${blockName} - ${unitNumber}`;
+    }
+
+    const apartmentId = currentUser.apartmentId || user?.apartmentId;
+    const selectedApartment = userApartments.find((apartment) => apartment.id === apartmentId) || userApartments[0];
+    if (selectedApartment?.blockName && selectedApartment?.unitNumber) {
+      return `${selectedApartment.blockName} - ${selectedApartment.unitNumber}`;
+    }
+
+    return 'Daire bilgisi yok';
+  };
 
   const handleLanguageSelect = async (lang: Language) => {
     console.log('🎯 [ResidentProfile] Language button clicked:', lang);
@@ -182,7 +214,7 @@ const ResidentProfile = () => {
             <Home size={18} color={colors.textSecondary} style={styles.infoIcon} />
             <View>
               <Text style={styles.infoLabel}>{t('profile.apartment')}</Text>
-              <Text style={styles.infoValue}>{user?.apartmentId || 'A Blok - 12'}</Text>
+              <Text style={styles.infoValue}>{getApartmentLabel()}</Text>
             </View>
           </View>
         </View>
@@ -391,12 +423,12 @@ const ResidentProfile = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.backgroundSecondary },
   headerBar: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    backgroundColor: colors.white, 
+    backgroundColor: colors.background, 
     paddingHorizontal: spacing.screenPaddingHorizontal,
     paddingTop: spacing.lg,
     paddingBottom: spacing.lg,
@@ -417,7 +449,7 @@ const styles = StyleSheet.create({
   headerSubtitle: { fontSize: fontSize.cardSubtitle, color: colors.textSecondary, marginTop: 2 },
   container: { flex: 1 },
   content: { paddingHorizontal: spacing.screenPaddingHorizontal, paddingVertical: spacing.lg, paddingBottom: 100, rowGap: spacing.lg },
-  profileSection: { alignItems: 'center', backgroundColor: colors.white, borderRadius: borderRadius.card, padding: spacing.xl, borderWidth: 1, borderColor: colors.border },
+  profileSection: { alignItems: 'center', backgroundColor: colors.background, borderRadius: borderRadius.card, padding: spacing.xl, borderWidth: 1, borderColor: colors.border },
   avatar: { width: 80, height: 80, borderRadius: borderRadius.full, borderWidth: 3, borderColor: colors.primaryLight, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: fontSize['5xl'], fontWeight: fontWeight.bold, color: colors.primary },
   nameText: { marginTop: spacing.md, fontSize: fontSize['2xl'], fontWeight: fontWeight.semibold, color: colors.textPrimary },
@@ -441,11 +473,11 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   section: { gap: spacing.listGap },
-  infoRow: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.card, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white, padding: spacing.lg },
+  infoRow: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.card, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background, padding: spacing.lg },
   infoIcon: { marginRight: spacing.md },
   infoLabel: { fontSize: fontSize.cardMeta, color: colors.textSecondary },
   infoValue: { fontSize: fontSize.cardTitle, fontWeight: fontWeight.medium, color: colors.textPrimary, marginTop: 2 },
-  menuItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: borderRadius.card, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white, paddingHorizontal: spacing.lg, paddingVertical: spacing.lg },
+  menuItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: borderRadius.card, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background, paddingHorizontal: spacing.lg, paddingVertical: spacing.lg },
   menuLeft: { flexDirection: 'row', alignItems: 'center' },
   menuIcon: { marginRight: spacing.md },
   menuLabel: { fontSize: fontSize.cardTitle, color: colors.textPrimary, fontWeight: fontWeight.medium },
@@ -463,7 +495,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: 16,
     width: '100%',
     maxWidth: 400,
@@ -494,7 +526,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
   },
   languageItemActive: {
     borderColor: colors.primary,
@@ -542,7 +574,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
   },
   apartmentItemActive: {
     borderColor: colors.primary,
@@ -581,3 +613,6 @@ const styles = StyleSheet.create({
 });
 
 export default ResidentProfile;
+
+
+

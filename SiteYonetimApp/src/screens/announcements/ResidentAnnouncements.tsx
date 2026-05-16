@@ -15,6 +15,7 @@ import {
   Info,
 } from 'lucide-react-native';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
+import { useTheme } from '../../context/ThemeContext';
 import { announcementService, Announcement } from '../../services/announcement.service';
 import { useAuth } from '../../context/AuthContext';
 import { useI18n } from '../../context/I18nContext';
@@ -24,6 +25,8 @@ import { useFocusEffect } from '@react-navigation/native';
 function ResidentAnnouncements() {
   const { t } = useI18n();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const { markAnnouncementsAsRead, refreshUnreadCount } = useNotifications();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -157,7 +160,7 @@ function ResidentAnnouncements() {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.backgroundSecondary,
@@ -170,7 +173,7 @@ const styles = StyleSheet.create({
   header: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    backgroundColor: colors.white, 
+    backgroundColor: colors.background, 
     paddingHorizontal: spacing.screenPaddingHorizontal,
     paddingTop: spacing.lg,
     paddingBottom: spacing.lg,
@@ -196,7 +199,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   card: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.card,
     padding: spacing.lg,
     marginBottom: spacing.rowGap,
@@ -266,3 +269,6 @@ const styles = StyleSheet.create({
 });
 
 export default ResidentAnnouncements;
+
+
+

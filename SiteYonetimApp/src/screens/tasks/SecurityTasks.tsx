@@ -49,19 +49,14 @@ export function SecurityTasks() {
         return 'pending'; // default
       };
       
-      // Sadece güvenliğe atanan görevleri filtrele ve status'u normalize et
-      const securityTasks = data
-        .filter(task => 
-          task.assignedTo?.includes('SECURITY') || 
-          task.assignedTo?.toLowerCase().includes('güvenlik')
-        )
-        .map(task => ({
-          ...task,
-          status: normalizeStatus(task.status as string)
-        }));
+      // Backend zaten user'a özel görevleri döndürüyor, sadece status'u normalize et
+      const securityTasks = data.map(task => ({
+        ...task,
+        status: normalizeStatus(task.status as string)
+      }));
       
-      console.log('SecurityTasks - Filtered tasks:', securityTasks.length);
-      console.log('SecurityTasks - Filtered data:', JSON.stringify(securityTasks, null, 2));
+      console.log('SecurityTasks - Normalized tasks:', securityTasks.length);
+      console.log('SecurityTasks - Normalized data:', JSON.stringify(securityTasks, null, 2));
       
       setTasks(securityTasks);
     } catch (error) {

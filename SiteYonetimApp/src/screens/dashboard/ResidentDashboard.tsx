@@ -23,7 +23,7 @@ import {
   Building2,
   Check,
 } from 'lucide-react-native';
-import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
+import { spacing, borderRadius, fontSize, fontWeight } from '../../theme';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { dueService } from '../../services/due.service';
@@ -33,6 +33,7 @@ import { financeService } from '../../services/finance.service';
 import { packageService } from '../../services/package.service';
 import { apiClient } from '../../api/apiClient';
 import { useI18n } from '../../context/I18nContext';
+import { useTheme } from '../../context/ThemeContext';
 
 interface DashboardStatsResponse {
   unpaidDues?: number;
@@ -44,8 +45,10 @@ interface DashboardStatsResponse {
 
 function ResidentDashboard() {
   const { t } = useI18n();
+  const { colors } = useTheme();
   const navigation = useNavigation<any>();
   const { user, switchApartment } = useAuth();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showApartmentModal, setShowApartmentModal] = useState(false);
@@ -387,7 +390,7 @@ function ResidentDashboard() {
         {/* Özet Kartlar */}
         <View style={styles.summaryRow}>
           <Pressable 
-            style={[styles.summaryCard, { backgroundColor: '#fce7f3' }]}
+            style={[styles.summaryCard, { backgroundColor: colors.errorLight, borderColor: colors.error }]}
             onPress={() => navigation.navigate('DuesTab')}
           >
             <View style={styles.summaryCardHeader}>
@@ -401,7 +404,7 @@ function ResidentDashboard() {
           </Pressable>
 
           <Pressable 
-            style={[styles.summaryCard, { backgroundColor: '#fef3c7' }]}
+            style={[styles.summaryCard, { backgroundColor: colors.warningLight, borderColor: colors.warning }]}
             onPress={() => navigation.navigate('TicketsTab')}
           >
             <View style={styles.summaryCardHeader}>
@@ -418,7 +421,7 @@ function ResidentDashboard() {
         {/* Paket Kartları */}
         <View style={styles.summaryRow}>
           <Pressable 
-            style={[styles.summaryCard, { backgroundColor: '#dbeafe' }]}
+            style={[styles.summaryCard, { backgroundColor: colors.infoLight, borderColor: colors.info }]}
             onPress={() => navigation.navigate('ResidentPackages')}
           >
             <View style={styles.summaryCardHeader}>
@@ -435,7 +438,7 @@ function ResidentDashboard() {
 
           {stats.pendingConfirmationPackages > 0 && (
             <Pressable 
-              style={[styles.summaryCard, { backgroundColor: '#fef3c7' }]}
+              style={[styles.summaryCard, { backgroundColor: colors.warningLight, borderColor: colors.warning }]}
               onPress={() => navigation.navigate('ResidentPackages')}
             >
               <View style={styles.summaryCardHeader}>
@@ -674,10 +677,10 @@ function ResidentDashboard() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#f8fafb',
+    backgroundColor: colors.backgroundSecondary,
   },
   container: {
     flex: 1,
@@ -697,7 +700,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.screenPaddingHorizontal,
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -747,12 +750,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   welcomeCard: {
-    backgroundColor: '#e0f2f1',
+    backgroundColor: colors.primaryLight,
     marginHorizontal: spacing.screenPaddingHorizontal,
     marginTop: spacing.lg,
     marginBottom: spacing.lg,
     padding: spacing.lg,
     borderRadius: borderRadius.cardLg,
+    borderWidth: 1,
+    borderColor: colors.primary,
   },
   welcomeTitle: {
     fontSize: fontSize.xl,
@@ -774,6 +779,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: borderRadius.cardLg,
     padding: spacing.lg,
+    borderWidth: 1,
   },
   summaryCardFull: {
     flex: 1,
@@ -788,7 +794,7 @@ const styles = StyleSheet.create({
   summaryCardLabel: {
     fontSize: 10,
     fontWeight: fontWeight.semibold,
-    color: '#78716c',
+    color: colors.textSecondary,
     letterSpacing: 0.5,
   },
   summaryCardIcon: {
@@ -801,12 +807,12 @@ const styles = StyleSheet.create({
   summaryCardValue: {
     fontSize: 32,
     fontWeight: fontWeight.bold,
-    color: '#1c1917',
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   summaryCardAmount: {
     fontSize: fontSize.sm,
-    color: '#78716c',
+    color: colors.textSecondary,
   },
   section: {
     marginBottom: spacing.xl,
@@ -829,7 +835,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   financeCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     marginHorizontal: spacing.screenPaddingHorizontal,
     borderRadius: borderRadius.cardLg,
     borderWidth: 1,
@@ -895,7 +901,7 @@ const styles = StyleSheet.create({
   },
   announcementCard: {
     flexDirection: 'row',
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.cardLg,
     padding: spacing.lg,
     borderWidth: 1,
@@ -905,7 +911,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.backgroundSecondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
@@ -947,7 +953,7 @@ const styles = StyleSheet.create({
   ticketCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.cardLg,
     padding: spacing.lg,
     borderWidth: 1,
@@ -994,7 +1000,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacing.xl,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.cardLg,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1010,7 +1016,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: spacing.lg,
@@ -1041,7 +1047,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: borderRadius.cardLg,
@@ -1087,3 +1093,5 @@ const styles = StyleSheet.create({
 });
 
 export default ResidentDashboard;
+
+

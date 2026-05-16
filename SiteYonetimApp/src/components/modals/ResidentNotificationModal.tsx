@@ -30,6 +30,7 @@ const ResidentNotificationModal: React.FC<ResidentNotificationModalProps> = ({
   const [apartmentNumber, setApartmentNumber] = useState('');
   const [cargoCompany, setCargoCompany] = useState('');
   const [expectedDate, setExpectedDate] = useState('');
+  const [deliveryCode, setDeliveryCode] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Auto-fill fullName and apartmentNumber from user profile
@@ -74,6 +75,7 @@ const ResidentNotificationModal: React.FC<ResidentNotificationModalProps> = ({
         fullName: fullName.trim(),
         cargoCompany: cargoCompany.trim() || undefined,
         expectedDate: expectedDate.trim() || undefined,
+        deliveryCode: deliveryCode.trim() || undefined,
       };
 
       const response = await packageService.createResidentNotification(request);
@@ -121,6 +123,7 @@ const ResidentNotificationModal: React.FC<ResidentNotificationModalProps> = ({
     setApartmentNumber('');
     setCargoCompany('');
     setExpectedDate('');
+    setDeliveryCode('');
     onClose();
   };
 
@@ -208,6 +211,23 @@ const ResidentNotificationModal: React.FC<ResidentNotificationModalProps> = ({
               />
               <Text style={styles.hint}>
                 Kargonuzun ne zaman geleceğini biliyorsanız girebilirsiniz
+              </Text>
+            </View>
+
+            {/* Delivery Code */}
+            <View style={styles.fieldWrapper}>
+              <Text style={styles.label}>Teslim Kodu (Opsiyonel)</Text>
+              <TextInput
+                style={styles.input}
+                value={deliveryCode}
+                onChangeText={setDeliveryCode}
+                placeholder="Örn: 1234, ABC123"
+                placeholderTextColor={colors.textSecondary}
+                editable={!loading}
+                autoCapitalize="characters"
+              />
+              <Text style={styles.hint}>
+                Kargo şirketinden aldığınız teslim kodunu girebilirsiniz
               </Text>
             </View>
           </View>

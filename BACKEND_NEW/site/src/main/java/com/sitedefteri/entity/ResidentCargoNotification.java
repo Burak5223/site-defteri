@@ -44,6 +44,9 @@ public class ResidentCargoNotification {
     @Column(name = "expected_date")
     private LocalDate expectedDate;
 
+    @Column(name = "delivery_code", length = 50)
+    private String deliveryCode;
+
     @Column(name = "status", nullable = false, length = 50)
     private String status = "pending_match"; // pending_match, matched, expired
 

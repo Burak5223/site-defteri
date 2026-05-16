@@ -553,7 +553,7 @@ public class DashboardService {
         long totalTickets = ticketRepository.findAll().stream()
                 .filter(t -> siteIdStr.equals(t.getSiteId()))
                 .count();
-        long openTickets = ticketRepository.findAll().stream()
+        long acikTickets = ticketRepository.findAll().stream()
                 .filter(t -> siteIdStr.equals(t.getSiteId()))
                 .filter(t -> t.getStatus() == com.sitedefteri.entity.Ticket.TicketStatus.acik)
                 .count();
@@ -570,6 +570,9 @@ public class DashboardService {
                 .filter(t -> t.getStatus() == com.sitedefteri.entity.Ticket.TicketStatus.kapali)
                 .count();
         
+        // openTickets = acik + islemde (dashboard'da gösterilecek toplam açık arıza sayısı)
+        long openTickets = acikTickets + inProgressTickets;
+        
         double resolutionRate = totalTickets > 0 ? 
                 Math.round(((resolvedTickets + closedTickets) * 100.0 / totalTickets) * 10.0) / 10.0 : 100.0;
         
@@ -579,6 +582,9 @@ public class DashboardService {
         stats.setResolvedTickets(resolvedTickets);
         stats.setClosedTickets(closedTickets);
         stats.setResolutionRate(resolutionRate);
+        
+        log.info("Site {} ticket stats: total={}, open={} (acik={} + islemde={}), resolved={}, closed={}", 
+                siteId, totalTickets, openTickets, acikTickets, inProgressTickets, resolvedTickets, closedTickets);
     }
     
     /**
@@ -705,12 +711,58 @@ public class DashboardService {
         
         DashboardStatsResponse stats = new DashboardStatsResponse();
         
-        // Kullanıcının arızaları (createdBy ile) - enum karşılaştırması
-        long openTickets = ticketRepository.findAll().stream()
-                .filter(t -> userId.equals(t.getCreatedBy()) && 
-                            (t.getStatus() == com.sitedefteri.entity.Ticket.TicketStatus.acik || 
-                             t.getStatus() == com.sitedefteri.entity.Ticket.TicketStatus.islemde))
-                .count();
+        // Kullanıcının sitesindeki TÜM arızaları bul (arıza listesi ile tutarlı olması için)
+        long openTickets = 0;
+        try {
+            // Kullanıcının apartmentlarını bul
+            List<String> apartmentIds = apartmentRepository.findByActiveResidency(userId)
+                    .stream()
+                    .map(apartment -> apartment.getId())
+                    .collect(java.util.stream.Collectors.toList());
+            
+            if (!apartmentIds.isEmpty()) {
+                // İlk apartmenttan site ID'yi al
+                String firstApartmentId = apartmentIds.get(0);
+                var apartment = apartmentRepository.findById(firstApartmentId);
+                
+                if (apartment.isPresent()) {
+                    String siteId = apartment.get().getSiteId();
+                    
+                    // Site'deki TÜM açık/işlemdeki arızaları say (arıza listesi ile aynı mantık)
+                    openTickets = ticketRepository.findAll().stream()
+                            .filter(t -> siteId.equals(t.getSiteId()) && 
+                                        (t.getStatus() == com.sitedefteri.entity.Ticket.TicketStatus.acik || 
+                                         t.getStatus() == com.sitedefteri.entity.Ticket.TicketStatus.islemde))
+                            .count();
+                    
+                    log.info("Found {} open tickets in site {} for user {}", openTickets, siteId, userId);
+                } else {
+                    log.warn("Apartment {} not found, using fallback", firstApartmentId);
+                    // Fallback: kullanıcının kendi oluşturduğu arızalar
+                    openTickets = ticketRepository.findAll().stream()
+                            .filter(t -> userId.equals(t.getUserId()) && 
+                                        (t.getStatus() == com.sitedefteri.entity.Ticket.TicketStatus.acik || 
+                                         t.getStatus() == com.sitedefteri.entity.Ticket.TicketStatus.islemde))
+                            .count();
+                }
+            } else {
+                log.warn("No apartments found for user {}, checking tickets by userId", userId);
+                // Fallback: kullanıcının kendi oluşturduğu arızalar
+                openTickets = ticketRepository.findAll().stream()
+                        .filter(t -> userId.equals(t.getUserId()) && 
+                                    (t.getStatus() == com.sitedefteri.entity.Ticket.TicketStatus.acik || 
+                                     t.getStatus() == com.sitedefteri.entity.Ticket.TicketStatus.islemde))
+                        .count();
+            }
+        } catch (Exception e) {
+            log.error("Error calculating tickets for user {}: {}", userId, e.getMessage());
+            // Fallback: kullanıcının kendi oluşturduğu arızalar
+            openTickets = ticketRepository.findAll().stream()
+                    .filter(t -> userId.equals(t.getUserId()) && 
+                                (t.getStatus() == com.sitedefteri.entity.Ticket.TicketStatus.acik || 
+                                 t.getStatus() == com.sitedefteri.entity.Ticket.TicketStatus.islemde))
+                    .count();
+        }
         
         // Kullanıcının okunmamış mesajları (şimdilik 0 dön, mesajlaşma sistemi yeni)
         long unreadMessages = 0;
@@ -767,6 +819,32 @@ public class DashboardService {
         
         stats.setOpenTickets(openTickets);
         stats.setUnreadMessages(unreadMessages);
+        
+        // Kullanıcının görevlerini say (Security ve Cleaning için)
+        try {
+            long totalTasks = taskRepository.findAll().stream()
+                    .filter(t -> userId.equals(t.getAssignedTo()) && !t.getIsDeleted())
+                    .count();
+            
+            long completedTasks = taskRepository.findAll().stream()
+                    .filter(t -> userId.equals(t.getAssignedTo()) && !t.getIsDeleted())
+                    .filter(t -> t.getStatus() == com.sitedefteri.entity.Task.TaskStatus.tamamlandi)
+                    .count();
+            
+            long pendingTasks = totalTasks - completedTasks;
+            
+            stats.setTotalTasks(totalTasks);
+            stats.setCompletedTasks(completedTasks);
+            stats.setPendingTasks(pendingTasks);
+            
+            log.info("User {} tasks: total={}, completed={}, pending={}", 
+                    userId, totalTasks, completedTasks, pendingTasks);
+        } catch (Exception e) {
+            log.error("Error calculating tasks for user {}: {}", userId, e.getMessage());
+            stats.setTotalTasks(0L);
+            stats.setCompletedTasks(0L);
+            stats.setPendingTasks(0L);
+        }
         
         log.info("Resident dashboard calculated: openTickets={}, unreadMessages={}", 
                 openTickets, unreadMessages);

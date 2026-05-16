@@ -16,7 +16,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from 'lucide-react-native';
-import { lightTheme, spacing } from '../../theme';
+import { colors, lightTheme, spacing } from '../../theme';
 import { useAuth } from '../../context/AuthContext';
 import { useI18n } from '../../context/I18nContext';
 
@@ -255,7 +255,7 @@ export default SiteSettingsScreen;
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     fontSize: 14,
     color: '#111827',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
   },
   ibanInput: {
     fontFamily: 'monospace',
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.backgroundSecondary,
     alignItems: 'center',
     paddingVertical: 24,
     paddingHorizontal: 16,
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     padding: 10,
   },
   accountCardActive: {
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 999,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     alignSelf: 'flex-start',
   },
   switchInnerOn: {
@@ -522,3 +522,4 @@ const styles = StyleSheet.create({
     color: '#92400e',
   },
 });
+

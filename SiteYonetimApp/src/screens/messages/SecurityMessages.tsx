@@ -19,7 +19,7 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { messageService, Message } from '../../services/message.service';
-import { lightTheme } from '../../theme';
+import { colors, lightTheme } from '../../theme';
 
 type ChatView = 'list' | 'group' | 'direct-chat';
 
@@ -467,7 +467,7 @@ export default SecurityMessages;
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.backgroundSecondary,
   },
   flexContainer: {
     flex: 1,
@@ -476,15 +476,15 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.backgroundSecondary,
   },
   listHeader: {
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: colors.border,
   },
   listHeaderTitle: {
     fontSize: 24,
@@ -495,17 +495,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 12,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.backgroundSecondary,
   },
   searchInput: {
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 15,
     color: '#020617',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
   },
   sectionHeader: {
     marginTop: 24,
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
   },
   listScroll: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.backgroundSecondary,
   },
   listScrollContent: {
     paddingHorizontal: 20,
@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
   },
   chatCard: {
     borderRadius: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -601,8 +601,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    backgroundColor: '#ffffff',
+    borderBottomColor: colors.border,
+    backgroundColor: colors.background,
   },
   headerBackButton: {
     width: 44,
@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 8,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.backgroundSecondary,
   },
   chatHeaderIconApartment: {
     width: 44,
@@ -665,7 +665,7 @@ const styles = StyleSheet.create({
   },
   messagesScroll: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.backgroundSecondary,
   },
   messagesScrollContent: {
     paddingHorizontal: 20,
@@ -682,7 +682,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.backgroundTertiary,
   },
   messageRow: {
     flexDirection: 'row',
@@ -751,20 +751,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-    backgroundColor: '#ffffff',
+    borderTopColor: colors.border,
+    backgroundColor: colors.background,
     marginBottom: 0,
   },
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     borderRadius: 24,
     paddingHorizontal: 18,
     paddingVertical: 12,
     fontSize: 15,
     color: '#020617',
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.backgroundSecondary,
     marginRight: 12,
   },
   sendButton: {
@@ -794,3 +794,5 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
 });
+
+

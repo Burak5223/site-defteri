@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ViewStyle, StyleProp } from 'react-native';
 import { LucideIcon } from 'lucide-react-native';
+import { useTheme } from '../context/ThemeContext';
 
 interface EmptyStateProps {
   icon: LucideIcon;
@@ -19,15 +20,17 @@ export const EmptyState = ({
   onAction,
   style,
 }: EmptyStateProps) => {
+  const { colors } = useTheme();
+
   return (
     <View style={[styles.container, style]}>
-      <View style={styles.iconContainer}>
-        <Icon color="#94a3b8" size={32} />
+      <View style={[styles.iconContainer, { backgroundColor: colors.backgroundTertiary }]}>
+        <Icon color={colors.textTertiary} size={32} />
       </View>
-      <Text style={styles.title}>{title}</Text>
-      {message && <Text style={styles.message}>{message}</Text>}
+      <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
+      {message && <Text style={[styles.message, { color: colors.textSecondary }]}>{message}</Text>}
       {actionLabel && onAction && (
-        <TouchableOpacity style={styles.actionButton} onPress={onAction}>
+        <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.primary }]} onPress={onAction}>
           <Text style={styles.actionLabel}>{actionLabel}</Text>
         </TouchableOpacity>
       )}

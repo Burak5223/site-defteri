@@ -107,6 +107,10 @@ public class Package extends BaseEntity {
     @Column(name = "matched_notification_id")
     private Long matchedNotificationId;  // Reference to resident notification
     
+    // Delivery Code System - Resident can enter code from courier company
+    @Column(name = "delivery_code", length = 50)
+    private String deliveryCode;  // Optional code from courier company (e.g., "1234", "ABC123")
+    
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
     

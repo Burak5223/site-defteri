@@ -46,16 +46,11 @@ export function CleaningTasks() {
         return 'pending';
       };
       
-      // Sadece temizliğe atanan görevleri filtrele
-      const cleaningTasks = data
-        .filter(task => 
-          task.assignedTo?.includes('CLEANING') || 
-          task.assignedTo?.toLowerCase().includes('temizlik')
-        )
-        .map(task => ({
-          ...task,
-          status: normalizeStatus(task.status as string)
-        }));
+      // Backend zaten user'a özel görevleri döndürüyor, sadece status'u normalize et
+      const cleaningTasks = data.map(task => ({
+        ...task,
+        status: normalizeStatus(task.status as string)
+      }));
       
       setTasks(cleaningTasks);
     } catch (error) {

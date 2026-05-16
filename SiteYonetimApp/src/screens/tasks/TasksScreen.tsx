@@ -28,16 +28,18 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { taskService, Task } from '../../services/task.service';
-import { lightTheme } from '../../theme';
 import { useI18n } from '../../context/I18nContext';
 import { SecurityTasks } from './SecurityTasks';
 import { CleaningTasks } from './CleaningTasks';
+import { useTheme } from '../../context/ThemeContext';
 
 type TabValue = 'all' | 'pending' | 'completed';
 
 const TasksScreen = () => {
   const { t } = useI18n();
   const { user, hasRole } = useAuth();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   
   // Güvenlik kullanıcısı için SecurityTasks ekranını göster
   if (hasRole('ROLE_SECURITY')) {
@@ -147,7 +149,7 @@ const TasksScreen = () => {
       case 'bakım':
         return { bg: 'rgba(34, 197, 94, 0.08)', color: '#22c55e', icon: Wrench };
       default:
-        return { bg: 'rgba(148, 163, 184, 0.08)', color: '#94a3b8', icon: ClipboardList };
+        return { bg: 'rgba(148, 163, 184, 0.08)', color: colors.textTertiary, icon: ClipboardList };
     }
   };
 
@@ -166,7 +168,15 @@ const TasksScreen = () => {
     });
   };
 
-  const getRoleLabel = (role: string) => {
+  const normalizeRoleValue = (value?: string) => {
+    return (value || '')
+      .trim()
+      .toLocaleUpperCase('tr-TR')
+      .replace(/\s+/g, '_');
+  };
+
+  const getRoleLabel = (role?: string) => {
+    const normalizedRole = normalizeRoleValue(role);
     const roleMap: { [key: string]: string } = {
       'ROLE_SECURITY': t('tasksScreen.security'),
       'ROLE_CLEANING': t('tasksScreen.cleaning'),
@@ -174,14 +184,51 @@ const TasksScreen = () => {
       'SECURITY': t('tasksScreen.security'),
       'CLEANING': t('tasksScreen.cleaning'),
       'MAINTENANCE': t('tasksScreen.maintenanceRole'),
+      'GUVENLIK': t('tasksScreen.security'),
+      'GÜVENLIK': t('tasksScreen.security'),
+      'GÜVENLİK': t('tasksScreen.security'),
+      'TEMIZLIK': t('tasksScreen.cleaning'),
+      'TEMİZLİK': t('tasksScreen.cleaning'),
+      'BAKIM': t('tasksScreen.maintenanceRole'),
     };
-    return roleMap[role] || role;
+    if (roleMap[normalizedRole]) return roleMap[normalizedRole];
+    if (
+      normalizedRole.includes('SECURITY') ||
+      normalizedRole.includes('GUVEN') ||
+      normalizedRole.includes('GÜVEN') ||
+      normalizedRole.includes('GÃ¼VEN')
+    ) {
+      return t('tasksScreen.security');
+    }
+    if (
+      normalizedRole.includes('CLEANING') ||
+      normalizedRole.includes('TEMIZ') ||
+      normalizedRole.includes('TEMİZ')
+    ) {
+      return t('tasksScreen.cleaning');
+    }
+    if (
+      normalizedRole.includes('MAINTENANCE') ||
+      normalizedRole.includes('BAKIM') ||
+      normalizedRole.includes('BAKÄ')
+    ) {
+      return t('tasksScreen.maintenanceRole');
+    }
+  };
+
+  const getAssignedRoleLabel = (task: Task) => {
+    return getRoleLabel(task.assignedTo) ||
+      getRoleLabel(task.assignedToName) ||
+      getRoleLabel(task.taskType) ||
+      getRoleLabel(task.title) ||
+      getRoleLabel(task.description) ||
+      t('tasksScreen.security');
   };
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={lightTheme.colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -193,7 +240,7 @@ const TasksScreen = () => {
         <View style={styles.siteSelector}>
           <View style={styles.siteSelectorLeft}>
             <View style={styles.siteIcon}>
-              <Building size={16} color={lightTheme.colors.primary} />
+              <Building size={16} color={colors.primary} />
             </View>
             <View>
               <Text style={styles.siteLabel}>{t('ui.siteName')}</Text>
@@ -210,7 +257,7 @@ const TasksScreen = () => {
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[lightTheme.colors.primary]} />}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
       >
         {/* Title */}
         <View style={styles.titleRow}>
@@ -246,6 +293,7 @@ const TasksScreen = () => {
             const colors = getTaskTypeColors(task.title);
             const TaskIcon = colors.icon;
             const isPending = task.status === 'pending' || task.status === 'in_progress';
+            const assignedRoleLabel = getAssignedRoleLabel(task);
 
             return (
               <View key={task.id} style={styles.card}>
@@ -258,7 +306,7 @@ const TasksScreen = () => {
                       <Text style={styles.cardTitle}>{task.title}</Text>
                       <Text style={styles.cardDescription}>{task.description}</Text>
                       <Text style={styles.cardDescription}>
-                        Atanan: {getRoleLabel(task.assignedToName || task.assignedTo)}
+                        {t('tasksScreen.assignedTo')} {assignedRoleLabel}
                       </Text>
                     </View>
                   </View>
@@ -466,10 +514,10 @@ const TasksScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.backgroundSecondary,
   },
   loadingContainer: {
     flex: 1,
@@ -481,11 +529,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 60,
+    paddingTop: 16,
     paddingBottom: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: colors.borderLight,
   },
   siteSelector: {
     flexDirection: 'row',
@@ -509,17 +557,17 @@ const styles = StyleSheet.create({
   siteLabel: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#020617',
+    color: colors.textPrimary,
   },
   siteSubLabel: {
     fontSize: 12,
-    color: '#64748b',
+    color: colors.textSecondary,
   },
   settingsButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.backgroundSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -539,35 +587,35 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#020617',
+    color: colors.textPrimary,
   },
   subtitle: {
     fontSize: 12,
-    color: '#64748b',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: lightTheme.colors.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
   },
   addButtonText: {
-    color: '#ffffff',
+    color: colors.background,
     fontSize: 14,
     fontWeight: '600',
   },
   tabsContainer: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderRadius: 12,
     padding: 4,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: colors.borderLight,
   },
   tab: {
     flex: 1,
@@ -576,24 +624,24 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   activeTab: {
-    backgroundColor: lightTheme.colors.primary,
+    backgroundColor: colors.primary,
   },
   tabText: {
     fontSize: 12,
-    color: '#64748b',
+    color: colors.textSecondary,
     fontWeight: '600',
   },
   activeTabText: {
-    color: '#ffffff',
+    color: colors.background,
     fontWeight: '700',
   },
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: colors.borderLight,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -620,12 +668,12 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#020617',
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   cardDescription: {
     fontSize: 12,
-    color: '#64748b',
+    color: colors.textSecondary,
   },
   statusBadge: {
     paddingHorizontal: 10,
@@ -642,7 +690,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
+    borderTopColor: colors.borderLight,
   },
   cardMeta: {
     flexDirection: 'row',
@@ -651,19 +699,19 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 12,
-    color: '#64748b',
+    color: colors.textSecondary,
   },
   completeButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: lightTheme.colors.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
   },
   completeButtonText: {
-    color: '#ffffff',
+    color: colors.background,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -673,7 +721,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: colors.textTertiary,
     marginTop: 12,
   },
   modalOverlay: {
@@ -682,7 +730,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     maxHeight: '85%',
@@ -690,17 +738,17 @@ const styles = StyleSheet.create({
   modalHeader: {
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: colors.borderLight,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#020617',
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   modalSubtitle: {
     fontSize: 13,
-    color: '#64748b',
+    color: colors.textSecondary,
   },
   closeButton: {
     position: 'absolute',
@@ -717,17 +765,17 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#020617',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 12,
     fontSize: 14,
-    color: '#020617',
-    backgroundColor: '#ffffff',
+    color: colors.textPrimary,
+    backgroundColor: colors.background,
   },
   textArea: {
     height: 80,
@@ -741,12 +789,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    backgroundColor: '#ffffff',
+    borderColor: colors.border,
+    backgroundColor: colors.background,
   },
   selectText: {
     fontSize: 14,
-    color: '#020617',
+    color: colors.textPrimary,
   },
   typeButtonsRow: {
     flexDirection: 'row',
@@ -760,28 +808,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    backgroundColor: '#ffffff',
+    borderColor: colors.border,
+    backgroundColor: colors.background,
     alignItems: 'center',
   },
   typeButtonActive: {
-    backgroundColor: lightTheme.colors.primary,
-    borderColor: lightTheme.colors.primary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   typeButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748b',
+    color: colors.textSecondary,
   },
   typeButtonTextActive: {
-    color: '#ffffff',
+    color: colors.background,
   },
   modalFooter: {
     flexDirection: 'row',
     gap: 12,
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
+    borderTopColor: colors.borderLight,
   },
   button: {
     flex: 1,
@@ -791,22 +839,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonSecondary: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.border,
   },
   buttonSecondaryText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#475569',
+    color: colors.textSecondary,
   },
   buttonPrimary: {
-    backgroundColor: lightTheme.colors.primary,
+    backgroundColor: colors.primary,
   },
   buttonPrimaryText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#ffffff',
+    color: colors.background,
   },
   footer: {
     position: 'absolute',
@@ -814,9 +862,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+    borderTopColor: colors.border,
   },
   footerButton: {
     flexDirection: 'row',
@@ -833,14 +881,15 @@ const styles = StyleSheet.create({
   },
   footerButtonDisabled: {
     opacity: 0.5,
-    backgroundColor: '#94a3b8',
-    shadowColor: '#94a3b8',
+    backgroundColor: colors.textTertiary,
+    shadowColor: colors.textTertiary,
   },
   footerButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#ffffff',
+    color: colors.background,
   },
 });
 
 export default TasksScreen;
+

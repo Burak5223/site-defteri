@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { colors } from '../../theme';
 
 const AnnouncementDetailScreen = () => {
   return (
@@ -14,7 +15,7 @@ const AnnouncementDetailScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.backgroundSecondary,
   },
   content: {
     padding: 16,

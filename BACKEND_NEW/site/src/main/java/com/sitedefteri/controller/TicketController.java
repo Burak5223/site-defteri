@@ -26,20 +26,52 @@ public class TicketController {
      */
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'RESIDENT', 'SECURITY', 'CLEANING')")
     @GetMapping("/tickets")
-    public ResponseEntity<List<TicketResponse>> getAllTickets(Authentication authentication) {
+    public ResponseEntity<List<TicketResponse>> getAllTickets(
+            Authentication authentication,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
         if (authentication == null) {
             return ResponseEntity.ok(List.of());
         }
         String userId = authentication.getName();
+        // JWT token'dan siteId'yi çıkar
+        String siteId = extractSiteIdFromToken(authHeader);
         // Kullanıcının kendi ticket'larını döndür
-        return ResponseEntity.ok(ticketService.getMyTickets(userId));
+        return ResponseEntity.ok(ticketService.getMyTickets(userId, siteId));
     }
     
     @PreAuthorize("hasAnyRole('ADMIN', 'RESIDENT', 'SECURITY', 'CLEANING')")
     @GetMapping("/tickets/my")
-    public ResponseEntity<List<TicketResponse>> getMyTickets(Authentication authentication) {
+    public ResponseEntity<List<TicketResponse>> getMyTickets(
+            Authentication authentication,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
         String userId = authentication.getName();
-        return ResponseEntity.ok(ticketService.getMyTickets(userId));
+        // JWT token'dan siteId'yi çıkar
+        String siteId = extractSiteIdFromToken(authHeader);
+        return ResponseEntity.ok(ticketService.getMyTickets(userId, siteId));
+    }
+    
+    private String extractSiteIdFromToken(String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            try {
+                String token = authHeader.substring(7);
+                // JWT token'ı parse et (base64 decode)
+                String[] parts = token.split("\\.");
+                if (parts.length >= 2) {
+                    String payload = new String(java.util.Base64.getUrlDecoder().decode(parts[1]));
+                    // JSON'dan siteId'yi çıkar
+                    if (payload.contains("\"siteId\"")) {
+                        int start = payload.indexOf("\"siteId\":\"") + 10;
+                        int end = payload.indexOf("\"", start);
+                        if (start > 9 && end > start) {
+                            return payload.substring(start, end);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Ignore parsing errors
+            }
+        }
+        return null;
     }
     
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'RESIDENT', 'SECURITY', 'CLEANING')")

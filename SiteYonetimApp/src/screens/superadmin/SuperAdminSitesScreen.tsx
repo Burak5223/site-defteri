@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
 import {
   ArrowLeft,
@@ -33,7 +34,7 @@ import AddSiteModal from './AddSiteModal';
 import EditSiteModal from './EditSiteModal';
 import AddManagerModal from './AddManagerModal';
 
-const SuperAdminSitesScreen = ({ navigation }: any) => {
+const SuperAdminSitesScreen = ({ navigation, route }: any) => {
   const { t } = useI18n();
   const { refreshUser } = useAuth();
   const [sites, setSites] = useState<SiteWithStats[]>([]);
@@ -58,6 +59,13 @@ const SuperAdminSitesScreen = ({ navigation }: any) => {
     visible: boolean;
     siteId: string | null;
   }>({ visible: false, siteId: null });
+
+  const handleAddSite = useCallback(() => {
+    setSiteDetailModal({ visible: false, site: null });
+    setEditSiteModal({ visible: false, site: null });
+    setAddManagerModal({ visible: false, siteId: null });
+    setAddSiteModal(true);
+  }, []);
 
   useEffect(() => {
     loadSites();
@@ -127,10 +135,6 @@ const SuperAdminSitesScreen = ({ navigation }: any) => {
 
   const handleSitePress = (site: SiteWithStats) => {
     setSiteDetailModal({ visible: true, site });
-  };
-
-  const handleAddSite = () => {
-    setAddSiteModal(true);
   };
 
   const handleEditSite = (site: SiteWithStats) => {
@@ -241,9 +245,9 @@ const SuperAdminSitesScreen = ({ navigation }: any) => {
             </Text>
           </View>
         </View>
-        <Pressable onPress={handleAddSite} style={styles.addButton}>
+        <TouchableOpacity activeOpacity={0.75} onPress={handleAddSite} style={styles.addButton}>
           <Plus size={20} color={colors.white} />
-        </Pressable>
+        </TouchableOpacity>
       </View>
 
       {/* Filter Tabs */}
@@ -428,7 +432,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     padding: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
@@ -476,7 +480,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     gap: spacing.sm,
@@ -506,7 +510,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     gap: spacing.sm,
@@ -525,7 +529,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   siteCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.card,
     borderWidth: 1,
     borderColor: colors.border,

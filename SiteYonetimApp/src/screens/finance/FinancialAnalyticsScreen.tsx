@@ -23,7 +23,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { financeService } from '../../services/finance.service';
 import { useAuth } from '../../context/AuthContext';
-import { lightTheme as theme } from '../../theme';
+import { colors, lightTheme as theme } from '../../theme';
 
 const { width } = Dimensions.get('window');
 
@@ -466,7 +466,7 @@ export default FinancialAnalyticsScreen;
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.backgroundSecondary,
   },
   header: {
     flexDirection: 'row',
@@ -475,9 +475,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 20,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: colors.borderLight,
   },
   headerTitle: {
     fontSize: 24,
@@ -513,7 +513,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
     width: (width - 52) / 2, // 20 padding left, 20 padding right, 12 gap -> 52 total reduction
     padding: 16,
     borderRadius: 16,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.03)',
     shadowColor: '#000',
@@ -547,10 +547,10 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  incomeCard: { backgroundColor: '#fff' },
-  expenseCard: { backgroundColor: '#fff' },
-  balanceCard: { backgroundColor: '#fff' },
-  reserveCard: { backgroundColor: '#fff' },
+  incomeCard: { backgroundColor: colors.background },
+  expenseCard: { backgroundColor: colors.background },
+  balanceCard: { backgroundColor: colors.background },
+  reserveCard: { backgroundColor: colors.background },
   summaryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -586,11 +586,11 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
   },
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: colors.borderLight,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.02,
@@ -644,7 +644,7 @@ const styles = StyleSheet.create({
   trendBarBg: {
     height: 36,
     borderRadius: 8,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.backgroundSecondary,
     flexDirection: 'row',
     overflow: 'hidden',
     display: 'none', // Hiding the old complex bar structure
@@ -715,7 +715,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.backgroundSecondary,
   },
   budgetHeaderRow: {
     flexDirection: 'row',
@@ -732,7 +732,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
@@ -810,3 +810,5 @@ const styles = StyleSheet.create({
     height: '100%',
   },
 });
+
+

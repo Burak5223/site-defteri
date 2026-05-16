@@ -32,6 +32,9 @@ public class CreatePackageRequest {
     
     private String notes;
     
+    @Size(max = 50, message = "Teslim kodu en fazla 50 karakter olabilir")
+    private String deliveryCode;  // Optional code from courier company
+    
     private String blockId;
     
     private String siteId;

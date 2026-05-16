@@ -14,10 +14,11 @@ import {
   ChevronRight,
 } from 'lucide-react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
+import { spacing, borderRadius, fontSize, fontWeight } from '../../theme';
 import { dueService, Due } from '../../services/due.service';
 import { useAuth } from '../../context/AuthContext';
 import { useI18n } from '../../context/I18nContext';
+import { useTheme } from '../../context/ThemeContext';
 
 interface MonthGroup {
   month: string;
@@ -32,8 +33,10 @@ interface MonthGroup {
 
 const AdminDues = () => {
   const { t } = useI18n();
+  const { colors } = useTheme();
   const navigation = useNavigation<any>();
   const { user } = useAuth();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [monthGroups, setMonthGroups] = useState<MonthGroup[]>([]);
@@ -204,7 +207,7 @@ const AdminDues = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.backgroundSecondary,
@@ -243,7 +246,7 @@ const styles = StyleSheet.create({
   monthCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.card,
     padding: spacing.lg,
     borderWidth: 1,
@@ -329,3 +332,4 @@ const styles = StyleSheet.create({
 });
 
 export default AdminDues;
+

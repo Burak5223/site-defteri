@@ -5,8 +5,9 @@ export interface Task {
   title: string;
   description: string;
   assignedTo: string; // Artık rol: ROLE_SECURITY, ROLE_CLEANING, vb.
-  assignedToName: string; // Rol adı (opsiyonel, backward compatibility için)
+  assignedToName?: string; // Rol adı (opsiyonel, backward compatibility için)
   assignedBy?: string; // Admin adı
+  taskType?: string;
   status: 'pending' | 'in_progress' | 'completed'; // Normalized to English after fetching
   priority?: 'low' | 'medium' | 'high';
   dueDate?: string;

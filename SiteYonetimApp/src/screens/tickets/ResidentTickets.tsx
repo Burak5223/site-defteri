@@ -28,12 +28,15 @@ import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme
 import { ticketService, Ticket } from '../../services/ticket.service';
 import { useAuth } from '../../context/AuthContext';
 import { useI18n } from '../../context/I18nContext';
+import { useTheme } from '../../context/ThemeContext';
 
 type TabKey = 'all' | 'open' | 'in_progress' | 'resolved';
 
 const ResidentTickets = () => {
   const { t } = useI18n();
   const { user } = useAuth();
+  const { colors: themeColors } = useTheme();
+  const styles = React.useMemo(() => createStyles(themeColors), [themeColors]);
   const [activeTab, setActiveTab] = useState<TabKey>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -195,15 +198,15 @@ const ResidentTickets = () => {
   }
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: themeColors.backgroundSecondary }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: themeColors.background, borderBottomColor: themeColors.border }]}>
         <View style={styles.headerIcon}>
           <AlertTriangle size={20} color={colors.primary} />
         </View>
         <View style={styles.headerInfo}>
-          <Text style={styles.headerTitle}>{t('tickets.title')}</Text>
-          <Text style={styles.headerSubtitle}>
+          <Text style={[styles.headerTitle, { color: themeColors.textPrimary }]}>{t('tickets.title')}</Text>
+          <Text style={[styles.headerSubtitle, { color: themeColors.textSecondary }]}>
             {tickets.filter(t => {
               const status = t.status.toLowerCase();
               return status === 'open' || status === 'acik';
@@ -223,25 +226,25 @@ const ResidentTickets = () => {
         }
       >
 
-        <View style={styles.searchWrapper}>
-          <Search size={16} color="#6b7280" style={styles.searchIcon} />
+        <View style={[styles.searchWrapper, { backgroundColor: themeColors.background, borderColor: themeColors.border }]}>
+          <Search size={16} color={themeColors.textSecondary} style={styles.searchIcon} />
           <TextInput
             placeholder={t('tickets.searchPlaceholder')}
-            placeholderTextColor="#9ca3af"
-            style={styles.searchInput}
+            placeholderTextColor={themeColors.textTertiary}
+            style={[styles.searchInput, { color: themeColors.textPrimary }]}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
         </View>
 
-        <View style={styles.tabsWrapper}>
+        <View style={[styles.tabsWrapper, { backgroundColor: themeColors.backgroundTertiary }]}>
           {(['all', 'open', 'in_progress', 'resolved'] as TabKey[]).map(tab => (
             <Pressable
               key={tab}
-              style={[styles.tab, activeTab === tab && styles.tabActive]}
+              style={[styles.tab, activeTab === tab && [styles.tabActive, { backgroundColor: themeColors.background }]]}
               onPress={() => setActiveTab(tab)}
             >
-              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+              <Text style={[styles.tabText, { color: themeColors.textSecondary }, activeTab === tab && [styles.tabTextActive, { color: themeColors.primary }]]}>
                 {tab === 'all' ? t('common.all') : tab === 'open' ? t('tickets.open') : tab === 'in_progress' ? t('tickets.inProgress') : t('tickets.resolved')}
               </Text>
             </Pressable>
@@ -253,7 +256,7 @@ const ResidentTickets = () => {
         ) : filteredTickets.length === 0 ? (
           <View style={styles.emptyState}>
             <AlertTriangle size={48} color="rgba(148,163,184,0.8)" />
-            <Text style={styles.emptyText}>{t('tickets.noTicketsFound')}</Text>
+            <Text style={[styles.emptyText, { color: themeColors.textTertiary }]}>{t('tickets.noTicketsFound')}</Text>
           </View>
         ) : (
           <View style={styles.listSpace}>
@@ -285,14 +288,14 @@ const ResidentTickets = () => {
               const statusColor = getStatusColor();
               
               return (
-                <View key={ticket.id} style={styles.card}>
+                <View key={ticket.id} style={[styles.card, { backgroundColor: themeColors.background, borderColor: themeColors.border }]}>
                   <View style={[styles.iconWrapper, { backgroundColor: statusColor.bg }]}>
                     <Wrench size={20} color={statusColor.color} />
                   </View>
                   <View style={styles.cardInfo}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>{ticket.title}</Text>
-                    <Text style={styles.cardDescription} numberOfLines={2}>{ticket.description}</Text>
-                    <Text style={styles.cardDate}>{new Date(ticket.createdAt).toLocaleDateString('tr-TR')}</Text>
+                    <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>{ticket.title}</Text>
+                    <Text style={[styles.cardDescription, { color: themeColors.textSecondary }]} numberOfLines={2}>{ticket.description}</Text>
+                    <Text style={[styles.cardDate, { color: themeColors.textTertiary }]}>{new Date(ticket.createdAt).toLocaleDateString('tr-TR')}</Text>
                   </View>
                   <View style={[styles.statusBadge, { backgroundColor: statusColor.bg }]}>
                     <Text style={[styles.statusText, { color: statusColor.color }]}>
@@ -314,11 +317,11 @@ const ResidentTickets = () => {
         onRequestClose={() => setNewTicketModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: themeColors.background }]}>
             <View style={styles.modalHeader}>
               <View>
-                <Text style={styles.modalTitle}>{t('tickets.newTicket')}</Text>
-                <Text style={styles.modalSubtitle}>{t('tickets.newTicketSubtitle')}</Text>
+                <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>{t('tickets.newTicket')}</Text>
+                <Text style={[styles.modalSubtitle, { color: themeColors.textSecondary }]}>{t('tickets.newTicketSubtitle')}</Text>
               </View>
               <Pressable onPress={() => { setNewTicketModalVisible(false); resetNewTicketForm(); }}>
                 <X size={24} color={colors.textPrimary} />
@@ -328,11 +331,11 @@ const ResidentTickets = () => {
             <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
               {/* Başlık */}
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>{t('tickets.titleLabel')}</Text>
+                <Text style={[styles.formLabel, { color: themeColors.textPrimary }]}>{t('tickets.titleLabel')}</Text>
                 <TextInput
-                  style={styles.formInput}
+                  style={[styles.formInput, { backgroundColor: themeColors.background, borderColor: themeColors.border, color: themeColors.textPrimary }]}
                   placeholder={t('tickets.titlePlaceholder')}
-                  placeholderTextColor="#94a3b8"
+                  placeholderTextColor={themeColors.textTertiary}
                   value={ticketTitle}
                   onChangeText={setTicketTitle}
                 />
@@ -340,25 +343,25 @@ const ResidentTickets = () => {
 
               {/* Açıklama */}
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>{t('tickets.descriptionLabel')}</Text>
+                <Text style={[styles.formLabel, { color: themeColors.textPrimary }]}>{t('tickets.descriptionLabel')}</Text>
                 <TextInput
-                  style={[styles.formInput, styles.formTextArea]}
+                  style={[styles.formInput, styles.formTextArea, { backgroundColor: themeColors.background, borderColor: themeColors.border, color: themeColors.textPrimary }]}
                   placeholder="Arıza detaylarını yazın (en az 5 karakter)..."
-                  placeholderTextColor="#94a3b8"
+                  placeholderTextColor={themeColors.textTertiary}
                   value={ticketDescription}
                   onChangeText={setTicketDescription}
                   multiline
                   numberOfLines={4}
                   textAlignVertical="top"
                 />
-                <Text style={styles.formHint}>
+                <Text style={[styles.formHint, { color: themeColors.textTertiary }]}>
                   {ticketDescription.length}/2000 karakter (minimum 5)
                 </Text>
               </View>
 
               {/* Kategori */}
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>{t('tickets.categoryLabel')}</Text>
+                <Text style={[styles.formLabel, { color: themeColors.textPrimary }]}>{t('tickets.categoryLabel')}</Text>
                 <View style={styles.typeButtonsRow}>
                   {[
                     { value: 'Bakım', label: 'Bakım' },
@@ -387,7 +390,7 @@ const ResidentTickets = () => {
 
               {/* Öncelik */}
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>{t('tickets.priorityLabel')}</Text>
+                <Text style={[styles.formLabel, { color: themeColors.textPrimary }]}>{t('tickets.priorityLabel')}</Text>
                 <View style={styles.typeButtonsRow}>
                   {[
                     { value: 'low', label: t('tickets.low') },
@@ -415,7 +418,7 @@ const ResidentTickets = () => {
 
               {/* Fotoğraflar */}
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>{t('tickets.photosLabel')}</Text>
+                <Text style={[styles.formLabel, { color: themeColors.textPrimary }]}>{t('tickets.photosLabel')}</Text>
                 
                 <View style={styles.photoButtons}>
                   <Pressable style={styles.photoButton} onPress={handleTakePhoto}>
@@ -428,7 +431,7 @@ const ResidentTickets = () => {
                   </Pressable>
                 </View>
 
-                <Text style={styles.formHint}>{ticketPhotos.length}/5 {t('tickets.photoHint')}</Text>
+                <Text style={[styles.formHint, { color: themeColors.textTertiary }]}>{ticketPhotos.length}/5 {t('tickets.photoHint')}</Text>
 
                 {/* Fotoğraf Önizlemeleri */}
                 {ticketPhotos.length > 0 && (
@@ -449,12 +452,12 @@ const ResidentTickets = () => {
               </View>
             </ScrollView>
 
-            <View style={styles.modalFooter}>
+            <View style={[styles.modalFooter, { borderTopColor: themeColors.borderLight }]}>
               <Pressable 
-                style={styles.modalCancelButton}
+                style={[styles.modalCancelButton, { backgroundColor: themeColors.backgroundSecondary, borderColor: themeColors.border }]}
                 onPress={() => { setNewTicketModalVisible(false); resetNewTicketForm(); }}
               >
-                <Text style={styles.modalCancelButtonText}>{t('common.cancel')}</Text>
+                <Text style={[styles.modalCancelButtonText, { color: themeColors.textSecondary }]}>{t('common.cancel')}</Text>
               </Pressable>
               <Pressable 
                 style={styles.modalCreateButton}
@@ -470,12 +473,12 @@ const ResidentTickets = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.backgroundSecondary },
   header: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    backgroundColor: colors.white, 
+    backgroundColor: colors.background, 
     paddingHorizontal: spacing.screenPaddingHorizontal,
     paddingTop: spacing.lg,
     paddingBottom: spacing.lg,
@@ -506,10 +509,10 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.screenPaddingHorizontal, paddingVertical: spacing.lg, paddingBottom: 100, rowGap: spacing.sectionGap },
   searchWrapper: { position: 'relative' },
   searchIcon: { position: 'absolute', left: 10, top: '50%', marginTop: -8 },
-  searchInput: { borderRadius: 999, backgroundColor: '#f3f4f6', paddingLeft: 32, paddingRight: 12, paddingVertical: 8, fontSize: 14, color: colors.textPrimary },
-  tabsWrapper: { flexDirection: 'row', borderRadius: 999, backgroundColor: '#f3f4f6', padding: 3 },
+  searchInput: { borderRadius: 999, backgroundColor: colors.backgroundTertiary, paddingLeft: 32, paddingRight: 12, paddingVertical: 8, fontSize: 14, color: colors.textPrimary },
+  tabsWrapper: { flexDirection: 'row', borderRadius: 999, backgroundColor: colors.backgroundTertiary, padding: 3 },
   tab: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 6, borderRadius: 999 },
-  tabActive: { backgroundColor: colors.white },
+  tabActive: { backgroundColor: colors.background },
   tabText: { fontSize: 12, color: colors.textSecondary },
   tabTextActive: { color: colors.primary, fontWeight: '500' },
   listSpace: { rowGap: 10 },
@@ -518,7 +521,7 @@ const styles = StyleSheet.create({
     borderRadius: 16, 
     borderWidth: 1, 
     borderColor: colors.border, 
-    backgroundColor: colors.white, 
+    backgroundColor: colors.background, 
     padding: 12,
     alignItems: 'flex-start',
   },
@@ -571,35 +574,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: colors.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '90%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: 20, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+  modalContent: { backgroundColor: colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '90%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.borderLight },
   modalTitle: { fontSize: 20, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
   modalSubtitle: { fontSize: 13, color: colors.textSecondary },
   modalBody: { padding: 20, maxHeight: 500 },
   formGroup: { marginBottom: 20 },
   formLabel: { fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginBottom: 8 },
-  formInput: { borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, padding: 12, fontSize: 14, color: colors.textPrimary, backgroundColor: colors.white },
+  formInput: { borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, padding: 12, fontSize: 14, color: colors.textPrimary, backgroundColor: colors.background },
   formTextArea: { height: 100, textAlignVertical: 'top' },
   formHint: { fontSize: 12, color: colors.textSecondary, marginTop: 6 },
-  formSelect: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, padding: 12, backgroundColor: colors.white },
+  formSelect: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, padding: 12, backgroundColor: colors.background },
   formSelectText: { fontSize: 14, color: colors.textPrimary },
   typeButtonsRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  typeButton: { flex: 1, minWidth: '22%', paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: '#e2e8f0', backgroundColor: colors.white, alignItems: 'center' },
+  typeButton: { flex: 1, minWidth: '22%', paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: '#e2e8f0', backgroundColor: colors.background, alignItems: 'center' },
   typeButtonActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   typeButtonText: { fontSize: 13, fontWeight: '600', color: '#64748b' },
   typeButtonTextActive: { color: colors.white },
   photoButtons: { flexDirection: 'row', gap: 12, marginBottom: 8 },
-  photoButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 2, borderColor: colors.primary, borderRadius: 12, paddingVertical: 12, backgroundColor: colors.white },
+  photoButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 2, borderColor: colors.primary, borderRadius: 12, paddingVertical: 12, backgroundColor: colors.background },
   photoButtonText: { fontSize: 14, fontWeight: '600', color: colors.primary },
   photoPreviewGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
   photoPreviewItem: { width: 80, height: 80, borderRadius: 12, overflow: 'hidden', position: 'relative' },
   photoPreviewImage: { width: '100%', height: '100%' },
   photoRemoveButton: { position: 'absolute', top: 4, right: 4, width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
-  modalFooter: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: '#f1f5f9' },
-  modalCancelButton: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center' },
-  modalCancelButtonText: { fontSize: 15, fontWeight: '600', color: '#475569' },
+  modalFooter: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: colors.borderLight },
+  modalCancelButton: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.backgroundSecondary, borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center' },
+  modalCancelButtonText: { fontSize: 15, fontWeight: '600', color: colors.textSecondary },
   modalCreateButton: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center' },
   modalCreateButtonText: { fontSize: 15, fontWeight: '600', color: colors.white },
 });
 
 export default ResidentTickets;
+
+
+
+

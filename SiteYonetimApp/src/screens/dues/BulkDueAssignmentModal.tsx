@@ -192,7 +192,7 @@ export default BulkDueAssignmentModal;
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -236,12 +236,12 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 48,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
     color: '#1f2937',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
   },
   currencyButton: {
     flexDirection: 'row',
@@ -250,9 +250,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 48,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     borderRadius: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
   },
   currencyText: {
     fontSize: 14,
@@ -269,9 +269,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
   },
   periodButtonActive: {
     backgroundColor: '#10b981',
@@ -301,9 +301,9 @@ const styles = StyleSheet.create({
     height: 48,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     borderRadius: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
   },
   dateButtonText: {
     fontSize: 14,
@@ -317,9 +317,9 @@ const styles = StyleSheet.create({
     height: 48,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     borderRadius: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
   },
   dueDayText: {
     fontSize: 14,
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 14,
     color: '#1f2937',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
   },
   warningBox: {
     padding: 12,
@@ -385,12 +385,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.background,
   },
   blockButtonSelected: {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.backgroundTertiary,
     borderColor: '#d1d5db',
   },
   blockButtonText: {
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
   summary: {
     padding: 16,
     borderRadius: 16,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.backgroundSecondary,
     marginBottom: 16,
   },
   summaryRow: {
@@ -447,3 +447,4 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 });
+

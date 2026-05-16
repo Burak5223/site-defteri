@@ -21,17 +21,20 @@ import {
   Bell,
 } from 'lucide-react-native';
 import QRCode from 'react-native-qrcode-svg';
-import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
+import { spacing, borderRadius, fontSize, fontWeight } from '../../theme';
 import { packageService, Package } from '../../services/package.service';
 import { useAuth } from '../../context/AuthContext';
 import { useI18n } from '../../context/I18nContext';
 import ResidentNotificationModal from '../../components/modals/ResidentNotificationModal';
+import { useTheme } from '../../context/ThemeContext';
 
 type TabKey = 'all' | 'waiting' | 'delivered';
 
 const ResidentPackages = () => {
   const { t } = useI18n();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<TabKey>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [packages, setPackages] = useState<Package[]>([]);
@@ -524,7 +527,7 @@ const ResidentPackages = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.backgroundSecondary },
   loadingContainer: {
     flex: 1,
@@ -534,7 +537,7 @@ const styles = StyleSheet.create({
   header: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    backgroundColor: colors.white, 
+    backgroundColor: colors.background, 
     paddingHorizontal: spacing.screenPaddingHorizontal,
     paddingTop: spacing.lg,
     paddingBottom: spacing.lg,
@@ -556,16 +559,16 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.screenPaddingHorizontal, paddingVertical: spacing.lg, paddingBottom: 100, rowGap: spacing.sectionGap },
   searchWrapper: { position: 'relative' },
   searchIcon: { position: 'absolute', left: 10, top: '50%', marginTop: -8 },
-  searchInput: { borderRadius: 999, borderWidth: 0, backgroundColor: '#f3f4f6', paddingLeft: 32, paddingRight: 12, paddingVertical: 8, fontSize: 14, color: colors.textPrimary },
-  tabsWrapper: { flexDirection: 'row', borderRadius: 999, backgroundColor: '#f3f4f6', padding: 3 },
+  searchInput: { borderRadius: 999, borderWidth: 0, backgroundColor: colors.backgroundTertiary, paddingLeft: 32, paddingRight: 12, paddingVertical: 8, fontSize: 14, color: colors.textPrimary },
+  tabsWrapper: { flexDirection: 'row', borderRadius: 999, backgroundColor: colors.backgroundTertiary, padding: 3 },
   tab: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 6, borderRadius: 999 },
-  tabActive: { backgroundColor: colors.white },
+  tabActive: { backgroundColor: colors.background },
   tabText: { fontSize: 12, color: colors.textSecondary },
   tabTextActive: { color: colors.primary, fontWeight: '500' },
   emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 32 },
   emptyText: { marginTop: 8, fontSize: 13, color: colors.textSecondary },
   listSpace: { rowGap: 10 },
-  card: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white, padding: 10 },
+  card: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background, padding: 10 },
   cardRow: { flexDirection: 'row', alignItems: 'flex-start' },
   statusIconWrapper: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
   statusIconWarning: { backgroundColor: 'rgba(245,158,11,0.12)' },
@@ -609,7 +612,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: 16,
     padding: 24,
     width: '85%',
@@ -630,7 +633,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
     marginBottom: 16,
   },
@@ -709,7 +712,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   pendingCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.sm,
@@ -769,7 +772,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
   },
   confirmModalCancelText: {
     fontSize: 14,
@@ -822,3 +825,5 @@ const styles = StyleSheet.create({
 });
 
 export default ResidentPackages;
+
+

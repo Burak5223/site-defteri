@@ -18,6 +18,7 @@ public class SaveCargoResponse {
     private MatchingResult matchingResult;
     private String qrToken;
     private String status; // received, waiting, etc.
+    private String deliveryCode; // Delivery code from matched notification
 
     public static SaveCargoResponse success(
             String packageId, 
@@ -33,6 +34,7 @@ public class SaveCargoResponse {
         response.setMatchingResult(matching);
         response.setQrToken(qrToken);
         response.setStatus(status);
+        response.setDeliveryCode(matching.getDeliveryCode()); // Set delivery code from matching
         return response;
     }
 

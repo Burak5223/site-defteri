@@ -177,9 +177,8 @@ public class ApartmentService {
     private ApartmentResponse mapToResponseWithResidents(Apartment apartment) {
         ApartmentResponse response = mapToResponse(apartment);
         
-        // Calculate resident count based on owner and tenant
-        int residentCount = 0;
         List<ApartmentResponse.ResidentInfo> residents = new ArrayList<>();
+        java.util.Set<String> addedUserIds = new java.util.HashSet<>();
         
         if (apartment.getOwnerUserId() != null && !apartment.getOwnerUserId().isEmpty()) {
             userRepository.findById(apartment.getOwnerUserId()).ifPresent(user -> {
@@ -196,8 +195,8 @@ public class ApartmentService {
                 ownerInfo.setPhone(user.getPhone());
                 ownerInfo.setResidentType("owner");
                 residents.add(ownerInfo);
+                addedUserIds.add(user.getId());
             });
-            residentCount++;
         }
         
         if (apartment.getCurrentResidentId() != null && !apartment.getCurrentResidentId().isEmpty()) {
@@ -220,13 +219,34 @@ public class ApartmentService {
                     tenantInfo.setPhone(user.getPhone());
                     tenantInfo.setResidentType("tenant");
                     residents.add(tenantInfo);
+                    addedUserIds.add(user.getId());
                 });
-                residentCount++;
             }
         }
+
+        // The real source of occupancy is residency_history. Some apartments have
+        // historical/current resident fields empty, while admin screens still show
+        // residents through active residency rows.
+        userRepository.findByApartmentId(apartment.getId()).forEach(user -> {
+            if (user == null || addedUserIds.contains(user.getId())) {
+                return;
+            }
+
+            ApartmentResponse.ResidentInfo residentInfo = new ApartmentResponse.ResidentInfo();
+            residentInfo.setId(user.getId());
+            residentInfo.setFullName(user.getFullName());
+            residentInfo.setEmail(user.getEmail());
+            residentInfo.setPhone(user.getPhone());
+
+            Boolean isOwner = userRepository.getIsOwnerByUserAndApartment(user.getId(), apartment.getId());
+            residentInfo.setResidentType(Boolean.TRUE.equals(isOwner) ? "owner" : "tenant");
+
+            residents.add(residentInfo);
+            addedUserIds.add(user.getId());
+        });
         
         // Set resident count and residents array
-        response.setResidentCount(residentCount);
+        response.setResidentCount(residents.size());
         response.setResidents(residents);
         
         return response;

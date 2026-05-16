@@ -1,6 +1,8 @@
 // 🎨 MERKEZI THEME SYSTEM - Frontend Native ile %100 Uyumlu
 
-export const colors = {
+export type ThemeMode = 'light' | 'dark';
+
+export const lightColors = {
   // Primary Colors
   primary: '#0f766e',
   primaryLight: 'rgba(15, 118, 110, 0.08)',
@@ -97,6 +99,58 @@ export const colors = {
   // Crown/Premium
   crown: '#f59e0b',
   crownLight: 'rgba(245, 158, 11, 0.08)',
+};
+
+export const darkColors: typeof lightColors = {
+  ...lightColors,
+  primary: '#2dd4bf',
+  primaryLight: 'rgba(45, 212, 191, 0.14)',
+  primaryDark: '#14b8a6',
+  successLight: 'rgba(34, 197, 94, 0.16)',
+  errorLight: 'rgba(239, 68, 68, 0.16)',
+  destructiveLight: 'rgba(239, 68, 68, 0.16)',
+  warningLight: 'rgba(245, 158, 11, 0.16)',
+  infoLight: 'rgba(59, 130, 246, 0.16)',
+  gray50: '#111827',
+  gray100: '#1f2937',
+  gray200: '#374151',
+  gray300: '#4b5563',
+  gray400: '#9ca3af',
+  gray500: '#d1d5db',
+  gray600: '#e5e7eb',
+  gray700: '#f3f4f6',
+  gray800: '#f9fafb',
+  gray900: '#ffffff',
+  slate50: '#0f172a',
+  slate100: '#111827',
+  slate200: '#1f2937',
+  slate300: '#334155',
+  slate400: '#94a3b8',
+  slate500: '#cbd5e1',
+  slate600: '#e2e8f0',
+  slate700: '#f1f5f9',
+  slate800: '#f8fafc',
+  slate900: '#ffffff',
+  textPrimary: '#f8fafc',
+  textSecondary: '#cbd5e1',
+  textTertiary: '#94a3b8',
+  textDisabled: '#64748b',
+  background: '#111827',
+  backgroundSecondary: '#020617',
+  backgroundTertiary: '#1f2937',
+  border: '#334155',
+  borderLight: '#1f2937',
+  borderDark: '#475569',
+  white: '#ffffff',
+  black: '#ffffff',
+  liveBg: 'rgba(16, 185, 129, 0.18)',
+  liveText: '#86efac',
+};
+
+export const colors = { ...lightColors };
+
+export const applyThemeColors = (mode: ThemeMode) => {
+  Object.assign(colors, mode === 'dark' ? darkColors : lightColors);
 };
 
 export const spacing = {

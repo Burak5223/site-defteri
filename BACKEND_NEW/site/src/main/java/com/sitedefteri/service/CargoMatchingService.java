@@ -76,7 +76,8 @@ public class CargoMatchingService {
                 resident.getId(),
                 notification.getApartmentId(),
                 resident.getUserQrToken(),
-                "Kargo sakinle eşleştirildi: " + formData.getFullName()
+                "Kargo sakinle eşleştirildi: " + formData.getFullName(),
+                notification.getDeliveryCode()  // Include delivery code from notification
             );
 
         } catch (Exception e) {
@@ -97,12 +98,13 @@ public class CargoMatchingService {
             String apartmentId,
             String fullName,
             String cargoCompany,
-            String expectedDate) {
+            String expectedDate,
+            String deliveryCode) {  // Added deliveryCode parameter
         
         String operation = "createResidentNotification";
         
-        log.info("[{}] [INFO] [CargoMatchingService] [{}] [siteId={}] [residentId={}] Creating notification, fullName={}", 
-                 LocalDateTime.now(), operation, siteId, residentId, fullName);
+        log.info("[{}] [INFO] [CargoMatchingService] [{}] [siteId={}] [residentId={}] Creating notification, fullName={}, deliveryCode={}", 
+                 LocalDateTime.now(), operation, siteId, residentId, fullName, deliveryCode);
         
         ResidentCargoNotification notification = new ResidentCargoNotification();
         notification.setResidentId(residentId);
@@ -112,6 +114,7 @@ public class CargoMatchingService {
         notification.setFullNameNormalized(aiParserService.normalizeFullName(fullName));
         notification.setCargoCompany(cargoCompany);
         notification.setStatus("pending_match");
+        notification.setDeliveryCode(deliveryCode);  // Set delivery code
         
         // Convert expectedDate string to LocalDate if provided
         if (expectedDate != null && !expectedDate.isEmpty()) {
@@ -125,8 +128,8 @@ public class CargoMatchingService {
 
         ResidentCargoNotification saved = notificationRepository.save(notification);
         
-        log.info("[{}] [INFO] [CargoMatchingService] [{}] [siteId={}] [residentId={}] Notification created, notificationId={}", 
-                 LocalDateTime.now(), operation, siteId, residentId, saved.getId());
+        log.info("[{}] [INFO] [CargoMatchingService] [{}] [siteId={}] [residentId={}] Notification created, notificationId={}, deliveryCode={}", 
+                 LocalDateTime.now(), operation, siteId, residentId, saved.getId(), deliveryCode);
 
         return saved;
     }

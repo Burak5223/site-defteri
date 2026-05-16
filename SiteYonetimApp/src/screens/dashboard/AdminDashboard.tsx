@@ -24,7 +24,7 @@ import {
   UserCircle,
   LogOut,
 } from 'lucide-react-native';
-import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
+import { spacing, borderRadius, fontSize, fontWeight } from '../../theme';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { dueService } from '../../services/due.service';
@@ -37,6 +37,7 @@ import { residentService } from '../../services/resident.service';
 import { siteService } from '../../services/site.service';
 import { useI18n } from '../../context/I18nContext';
 import { apiClient } from '../../api/apiClient';
+import { useTheme } from '../../context/ThemeContext';
 
 interface DashboardResponse {
   // Genel İstatistikler
@@ -94,8 +95,10 @@ interface DashboardResponse {
 
 function AdminDashboard() {
   const { t } = useI18n();
+  const { colors } = useTheme();
   const navigation = useNavigation<any>();
   const { signOut, user } = useAuth();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({
@@ -358,7 +361,7 @@ function AdminDashboard() {
           >
             <View style={styles.topCardHeader}>
               <Text style={styles.topCardLabel}>{t('dashboard.pendingDues').toUpperCase()}</Text>
-              <View style={[styles.topCardIcon, { backgroundColor: colors.white }]}>
+              <View style={[styles.topCardIcon, { backgroundColor: colors.background }]}>
                 <CreditCard size={20} color={colors.primary} />
               </View>
             </View>
@@ -372,7 +375,7 @@ function AdminDashboard() {
           >
             <View style={styles.topCardHeader}>
               <Text style={styles.topCardLabel}>{t('dashboard.openTickets').toUpperCase()}</Text>
-              <View style={[styles.topCardIcon, { backgroundColor: colors.white }]}>
+              <View style={[styles.topCardIcon, { backgroundColor: colors.background }]}>
                 <AlertTriangle size={20} color={colors.warning} />
               </View>
             </View>
@@ -654,7 +657,7 @@ function AdminDashboard() {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.backgroundSecondary,
@@ -674,7 +677,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     padding: spacing.lg,
     borderRadius: borderRadius.card,
     marginBottom: spacing.lg,
@@ -701,7 +704,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.backgroundTertiary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -728,13 +731,17 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   topCardGreen: {
-    backgroundColor: '#d1fae5',
+    backgroundColor: colors.successLight,
+    borderWidth: 1,
+    borderColor: colors.success,
   },
   topCardYellow: {
-    backgroundColor: '#fef3c7',
+    backgroundColor: colors.warningLight,
+    borderWidth: 1,
+    borderColor: colors.warning,
   },
   topCardWhite: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -790,7 +797,7 @@ const styles = StyleSheet.create({
   quickActionCard: {
     flex: 1,
     minWidth: 150,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.card,
     padding: spacing.lg,
     borderWidth: 1,
@@ -821,7 +828,7 @@ const styles = StyleSheet.create({
   taskCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.card,
     padding: spacing.lg,
     borderWidth: 1,
@@ -880,7 +887,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -914,7 +921,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   financeCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.card,
     borderWidth: 1,
     borderColor: colors.border,
@@ -978,7 +985,7 @@ const styles = StyleSheet.create({
   },
   announcementCard: {
     flexDirection: 'row',
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.card,
     padding: spacing.lg,
     borderWidth: 1,
@@ -1029,7 +1036,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing['2xl'],
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.card,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1042,3 +1049,5 @@ const styles = StyleSheet.create({
 });
 
 export default AdminDashboard;
+
+

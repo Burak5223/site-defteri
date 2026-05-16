@@ -24,8 +24,9 @@ public class TaskController {
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'SECURITY', 'CLEANING')")
     @GetMapping("/tasks")
     public ResponseEntity<List<TaskResponse>> getTasksSimple(Authentication authentication) {
+        String userId = authentication.getName(); // JWT'den user ID gelir
         String userRole = getUserRole(authentication);
-        return ResponseEntity.ok(taskService.getTasksByRole("1", userRole));
+        return ResponseEntity.ok(taskService.getTasksByUser("1", userId, userRole));
     }
     
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'SECURITY', 'CLEANING')")
@@ -33,8 +34,9 @@ public class TaskController {
     public ResponseEntity<List<TaskResponse>> getTasks(
             @PathVariable String siteId,
             Authentication authentication) {
+        String userId = authentication.getName(); // JWT'den user ID gelir
         String userRole = getUserRole(authentication);
-        return ResponseEntity.ok(taskService.getTasksByRole(siteId, userRole));
+        return ResponseEntity.ok(taskService.getTasksByUser(siteId, userId, userRole));
     }
     
     @PreAuthorize("hasRole('ADMIN')")
